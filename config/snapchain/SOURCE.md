@@ -1,0 +1,3 @@
+# Upstream deployment sources
+
+Adapted from farcasterxyz/snapchain commit fc87f2686472598143062a00e1c2b2633b2d87ab, docker-compose.mainnet.yml and validators.toml. Upstream license retained in UPSTREAM-LICENSE. The image is version 0.14.3, pinned to the multi-platform registry manifest digest sha256:15c19fb83091ecf86a9e7ec69d00aa70efd57fbf492e759fa368b954a803ee82, verified 20 October 2026. Grafana is omitted; HTTP and StatsD bind to loopback. Peer QUIC and gRPC remain reachable. No host cron, pruning job, or shutdown timer is installed. These pins require review before future protocol upgrades; do not assume a frozen version remains supported indefinitely.

@@ -1,0 +1,11 @@
+import { RefreshCw, ArrowUpRight } from 'lucide-react';
+import type { NodeInfo } from '../types';
+export default function NodePanel({info,error,url,loading,refresh,full=false}: {info:NodeInfo|null;error:string;url:string;loading:boolean;refresh:()=>void;full?:boolean}) {
+  const nearHead=!!info?.shardInfos?.length&&info.shardInfos.every(s=>s.maxHeight>0&&s.blockDelay>=0&&s.blockDelay<10);
+  return <section className={full?'node-detail':'connection'}><h2>{full?'Your node':'Connection'}</h2><p className="connection-state"><span className={`status-dot ${nearHead?'green':info?'amber':''}`}/>{loading?'Checking node':nearHead?'Near chain head':info?'Catching up':'Waiting for node'}</p>
+    <label className="sr-only" htmlFor={full?'detail-url':'node-url'}>Node endpoint</label><input id={full?'detail-url':'node-url'} readOnly value={url} aria-describedby={full?'detail-url-help':'node-url-help'}/>
+    <p id={full?'detail-url-help':'node-url-help'} className="fine-print">Local connection · configured in client/.env</p><button className="secondary" disabled={loading} onClick={refresh}>{loading?<RefreshCw size={15} className="spin"/>:null}Refresh status</button>
+    {full&&<><p className="helper">Your browser talks to a local proxy, which sends requests through the SSH tunnel to your own Snapchain node.</p>{error&&<p role="status" className="notice">{error} Snapshot loading can take several hours. A failed request alone does not prove that downloading is in progress; check server logs.</p>}{info&&<><p className="helper">Snapchain {info.version}</p><div className="table-scroll"><table><thead><tr><th>Shard</th><th>Height</th><th>Delay</th></tr></thead><tbody>{info.shardInfos.map(s=><tr key={s.shardId}><td>{s.shardId}</td><td>{s.maxHeight.toLocaleString()}</td><td>{s.blockDelay.toLocaleString()}s</td></tr>)}</tbody></table></div><p className="fine-print">Single-digit delays show proximity to the head. The operations monitor also checks advancing heights before recording sync as verified.</p></>}</>}
+    {!full&&<div className="make-yours"><h2>Make it yours</h2><p>No third-party API keys.<br/>Your feed, your infrastructure.</p><a href="/setup" target="_blank" rel="noreferrer">Read the setup guide <ArrowUpRight size={16}/></a></div>}
+  </section>;
+}

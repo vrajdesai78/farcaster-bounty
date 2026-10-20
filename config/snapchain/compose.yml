@@ -1,0 +1,124 @@
+# Adapted by Relay on 2026-10-20; see SOURCE.md and UPSTREAM-LICENSE.
+services:
+  snapchain:
+    image: farcasterxyz/snapchain@sha256:15c19fb83091ecf86a9e7ec69d00aa70efd57fbf492e759fa368b954a803ee82
+    pull_policy: missing
+    #    build: # For testing
+    #      context: .
+    #      dockerfile: Dockerfile
+    init: true # Auto-reap zombie processes and forward process signals
+    environment:
+      RUST_BACKTRACE: "full"
+      # Onchain-config controls. On by default — set ONCHAIN_CONFIG_ENABLED=false
+      # to opt out and make the config written below win verbatim. Declared here
+      # (not only interpolated inside the entrypoint text) so both override
+      # paths work: export in the host shell / .env, or set the values directly
+      # on these lines. Interpolating ${VAR:-} in the entrypoint alone would
+      # bake an empty assignment at compose-parse time that silently overrides
+      # an environment: entry.
+      ONCHAIN_CONFIG_ENABLED: "${ONCHAIN_CONFIG_ENABLED:-}"
+      ONCHAIN_CONFIG_REGISTRY: "${ONCHAIN_CONFIG_REGISTRY:-}"
+      ONCHAIN_CONFIG_RPC_URL: "${ONCHAIN_CONFIG_RPC_URL:-}"
+      # Validators whose bootstrap peers are private addresses the registry's
+      # public list can't carry (e.g. VPC-internal) set this to true to keep a
+      # non-empty local gossip.bootstrap_peers through the merge;
+      # validator_sets and direct_peers stay registry-managed either way.
+      ONCHAIN_CONFIG_ACCEPT_LOCAL_BOOTSTRAP_PEERS: "${ONCHAIN_CONFIG_ACCEPT_LOCAL_BOOTSTRAP_PEERS:-}"
+    entrypoint:
+      - "/bin/bash"
+      - "-c"
+      - |
+        #!/bin/bash
+        set -euo pipefail
+        cat > config.toml <<EOF
+
+        rpc_address="0.0.0.0:3383"
+        http_address="0.0.0.0:3381"
+        rocksdb_dir=".rocks"
+        fc_network="Mainnet"
+        read_node = true
+
+        [statsd]
+        prefix="snapchain"
+        addr="statsd:8125"
+        use_tags=true
+
+        [gossip]
+        address="/ip4/0.0.0.0/udp/3382/quic-v1"
+        bootstrap_peers = "/ip4/54.236.164.51/udp/3382/quic-v1, /ip4/54.87.204.167/udp/3382/quic-v1, /ip4/44.197.255.20/udp/3382/quic-v1, /ip4/54.157.62.17/udp/3382/quic-v1, /ip4/34.195.157.114/udp/3382/quic-v1, /ip4/107.20.169.236/udp/3382/quic-v1, /ip4/35.212.102.55/udp/3382/quic-v1, /ip4/35.157.151.56/udp/3382/quic-v1, /ip4/108.132.114.186/udp/3382/quic-v1"
+
+        [consensus]
+        shard_ids = [1,2]
+        num_shards = 2
+
+
+        [snapshot]
+        endpoint_url = "https://e1f9f185c6e63471dd39f96abd3413c4.r2.cloudflarestorage.com"
+        load_db_from_snapshot=true
+        EOF
+        # Append validator sets from the dedicated validators.toml file.
+        # See validators.toml for the full history of validator changes and operator details.
+        cat /app/validators.toml >> config.toml
+        # Merge registry-managed validator config. On by default; no-op on
+        # read nodes, and ONCHAIN_CONFIG_ENABLED=false opts out entirely (see
+        # the script header — the ONCHAIN_CONFIG_* controls come from the
+        # environment: block above). Running this as a validator wants
+        # ONCHAIN_CONFIG_RPC_URL: the heredoc above writes no l1_rpc_url, so
+        # fc's mainnet fallback has nothing to read and the pull fails
+        # (loudly) every boot, leaving the static config in charge until it
+        # is set.
+        # The -x guard keeps `docker compose pull && up` safe while the pinned
+        # :latest image predates the script (compose files ship on main,
+        # images on release tags): with the feature on by default, an old
+        # image just boots its static config. Only an EXPLICIT enable refuses
+        # on a missing script — an operator who asked for the pull must not
+        # silently boot on potentially stale static config.
+        if [ -x /app/apply-onchain-config.sh ]; then
+          ONCHAIN_CONFIG_CACHE=/app/.onchain-config/config.mainnet.toml \
+          /app/apply-onchain-config.sh config.toml || exit 1
+        elif [ "$${ONCHAIN_CONFIG_ENABLED:-}" = "true" ] || [ "$${ONCHAIN_CONFIG_ENABLED:-}" = "1" ]; then
+          echo "ONCHAIN_CONFIG_ENABLED is set but this image has no /app/apply-onchain-config.sh; refusing to boot" >&2
+          exit 1
+        fi
+        exec $0 $@ # Now run the original command
+    command: [ "./snapchain", "--config-path", "config.toml" ]
+    restart: always
+    ports:
+      - "127.0.0.1:3381:3381/tcp"
+      - "3382:3382/udp"
+      - "3383:3383/tcp"
+    volumes:
+      - .rocks:/app/.rocks
+      - .rocks.snapshot:/app/.rocks.snapshot
+      - .onchain-config:/app/.onchain-config
+      - ./validators.toml:/app/validators.toml:ro
+    networks:
+      - snapchain
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+
+  # Start this if you want perf metrics for your hubble node. Remember to start `grafana` as well.
+  statsd:
+    image: graphiteapp/graphite-statsd:1.1.10-5
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "nc", "-zv", "localhost", "8126"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 1m
+    ports:
+      # - '80:80' # Graphite web
+      # - '2003:2003' # Carbon line receiver
+      # - '2004:2004' # Carbon pickle receiver
+      # - '7002:7002' # Carbon cache query
+      - '127.0.0.1:8125:8125/udp' # StatsD
+      - '127.0.0.1:8126:8126' # StatsD admin
+    networks:
+      - snapchain
+
+networks:
+  snapchain:
+    driver: bridge

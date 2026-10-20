@@ -1,0 +1,383 @@
+#!/usr/bin/env python3
+"""Relay's resumable local orchestrator. Python 3.9+, no third-party Python packages."""
+import argparse
+import contextlib
+import fcntl
+import ipaddress
+import json
+import os
+from pathlib import Path
+import re
+import shlex
+import shutil
+import socket
+import subprocess
+import sys
+import time
+import uuid
+import urllib.request
+
+ROOT = Path(__file__).resolve().parent
+STATE_DIR = Path(os.environ.get('RELAY_STATE_DIR', ROOT / '.relay-state')).expanduser().resolve()
+STATE_FILE = STATE_DIR / 'state.json'
+TUNNEL_PORT = int(os.environ.get('RELAY_TUNNEL_PORT', '13381'))
+IMAGE = 'farcasterxyz/snapchain@sha256:15c19fb83091ecf86a9e7ec69d00aa70efd57fbf492e759fa368b954a803ee82'
+
+
+def run(args, capture=True, **kwargs):
+    result = subprocess.run([str(a) for a in args], text=True, capture_output=capture, **kwargs)
+    if result.returncode:
+        # Never echo input, environment or command arguments containing credentials.
+        detail = (result.stderr or '').strip()[-1200:]
+        raise RuntimeError('Command failed: ' + str(args[0]) + (': ' + detail if detail else ''))
+    return result.stdout.strip() if capture else ''
+
+
+def require(*names):
+    for name in names:
+        if not shutil.which(name):
+            raise RuntimeError('Install ' + name + ' before running this step. See SETUP.md.')
+
+
+def save(state):
+    STATE_DIR.mkdir(mode=0o700, parents=True, exist_ok=True)
+    os.chmod(STATE_DIR, 0o700)
+    temporary = STATE_FILE.with_suffix('.tmp')
+    temporary.write_text(json.dumps(state, indent=2) + '\n')
+    os.chmod(temporary, 0o600)
+    temporary.replace(STATE_FILE)
+
+
+def load(required=True):
+    if not STATE_FILE.exists():
+        if required:
+            raise RuntimeError('Run ./relay provision first, or adopt an existing server.')
+        return {}
+    return json.loads(STATE_FILE.read_text())
+
+
+def aws(state, service, action, *args):
+    command = ['aws', '--region', state['region']]
+    if state.get('profile'):
+        command += ['--profile', state['profile']]
+    output = run(command + [service, action, *args, '--output', 'json'])
+    return json.loads(output) if output else {}
+
+
+def ssh_args(state):
+    host = state.get('host', '')
+    if not re.fullmatch(r'[A-Za-z0-9_.-]+@[A-Za-z0-9_.-]+', host):
+        raise RuntimeError('Expected a user@hostname SSH target without shell characters.')
+    key = Path(state['key']).expanduser().resolve()
+    if not key.is_file():
+        raise RuntimeError('SSH key is missing. Restore its private local copy; do not create another server.')
+    return ['ssh', '-i', str(key), '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=12',
+            '-o', 'StrictHostKeyChecking=accept-new', '-o', 'UserKnownHostsFile=' + str(STATE_DIR / 'known_hosts'),
+            '-o', 'ServerAliveInterval=30', '-o', 'ServerAliveCountMax=3', state['host']]
+
+
+def remote(state, command):
+    return run(ssh_args(state) + [command])
+
+
+def validate_remote_dir(value):
+    if not re.fullmatch(r'/[A-Za-z0-9_./-]+', value) or '..' in Path(value).parts or value == '/':
+        raise RuntimeError('Use an absolute remote directory without shell characters or .. segments.')
+    return value
+
+
+def provision(args):
+    prior = load(False)
+    if prior.get('destroyed'):
+        raise RuntimeError('This deployment was destroyed. Archive its state and choose a fresh RELAY_STATE_DIR to provision another.')
+    if prior.get('host'):
+        if args.existing_host and prior['host'] != args.existing_host:
+            raise RuntimeError('This state already belongs to another host. Use another RELAY_STATE_DIR.')
+        print('Reusing saved host:', prior['host'], '\nNext: ./relay node')
+        return
+    if args.existing_host:
+        if not args.key:
+            raise RuntimeError('--existing-host requires --key pointing to your existing private SSH key.')
+        key = Path(args.key).expanduser().resolve()
+        if not key.is_file():
+            raise RuntimeError('The supplied SSH key does not exist.')
+        if not re.fullmatch(r'[A-Za-z0-9_.-]+@[A-Za-z0-9_.-]+', args.existing_host):
+            raise RuntimeError('Use --existing-host user@hostname.')
+        state = dict(prior, mode='adopted', host=args.existing_host, key=str(key),
+                     remote_dir=validate_remote_dir(args.remote_dir or '/opt/snapchain'))
+        if args.dry_run:
+            print('PLAN: adopt existing host; do not provision, install, restart or stop it.')
+            return
+        save(state)
+        print('Existing host adopted. No AWS resources changed.\nNext: ./relay node')
+        return
+    if not args.ack_costs:
+        raise RuntimeError('Provisioning incurs AWS charges. Review SETUP.md, then use --ack-costs.')
+    if not args.ssh_cidr:
+        raise RuntimeError('Supply your current public IPv4 as --ssh-cidr YOUR_IP/32.')
+    cidr = ipaddress.ip_network(args.ssh_cidr, strict=True)
+    if cidr.version != 4 or cidr.prefixlen != 32:
+        raise RuntimeError('SSH ingress must be one IPv4 address (/32).')
+    if args.dry_run:
+        print(json.dumps({'plan': 'create one EC2 instance', 'region': args.region, 'instance': 'm5.xlarge',
+                          'disk': '2000 GiB encrypted gp3 / 3000 IOPS / 125 MiB/s', 'ssh': str(cidr),
+                          'http': 'loopback via SSH', 'peers': 'public UDP 3382 and TCP 3383',
+                          'shutdown': 'none; explicit cleanup required', 'new_resources_created': False}, indent=2))
+        return
+    require('aws', 'ssh', 'ssh-keygen')
+    state = prior or {'mode': 'managed', 'token': str(uuid.uuid4()), 'region': args.region,
+                      'profile': args.profile, 'remote_dir': '/opt/relay-snapchain'}
+    save(state)  # Stable names/client token survive interruptions and permit resuming.
+    tag = 'relay-' + state['token'][:12]
+    state.setdefault('key', str(STATE_DIR / 'id_ed25519'))
+    if not Path(state['key']).exists():
+        run(['ssh-keygen', '-q', '-t', 'ed25519', '-N', '', '-f', state['key']])
+    save(state)
+    if not state.get('key_name'):
+        found = aws(state, 'ec2', 'describe-key-pairs', '--filters', 'Name=key-name,Values=' + tag)['KeyPairs']
+        if not found:
+            aws(state, 'ec2', 'import-key-pair', '--key-name', tag, '--public-key-material', 'fileb://' + state['key'] + '.pub')
+        state['key_name'] = tag
+        save(state)
+    if not state.get('subnet'):
+        if args.subnet_id:
+            subnet = aws(state, 'ec2', 'describe-subnets', '--subnet-ids', args.subnet_id)['Subnets'][0]
+        else:
+            subnets = aws(state, 'ec2', 'describe-subnets', '--filters', 'Name=default-for-az,Values=true')['Subnets']
+            if not subnets:
+                raise RuntimeError('No default subnet. Pass --subnet-id for an existing subnet with internet routing; no VPC/NAT is created.')
+            subnet = sorted(subnets, key=lambda x: x['AvailabilityZone'])[0]
+        state.update(subnet=subnet['SubnetId'], vpc=subnet['VpcId'])
+        save(state)
+    if not state.get('security_group'):
+        found = aws(state, 'ec2', 'describe-security-groups', '--filters', 'Name=group-name,Values=' + tag,
+                    'Name=vpc-id,Values=' + state['vpc'])['SecurityGroups']
+        group = found[0]['GroupId'] if found else aws(state, 'ec2', 'create-security-group', '--group-name', tag,
+                    '--description', 'Relay SSH and Snapchain peers', '--vpc-id', state['vpc'])['GroupId']
+        state['security_group'] = group
+        save(state)
+    if not state.get('rules_ready'):
+        rules = [{'IpProtocol': 'tcp', 'FromPort': 22, 'ToPort': 22, 'IpRanges': [{'CidrIp': str(cidr)}]},
+                 {'IpProtocol': 'udp', 'FromPort': 3382, 'ToPort': 3382, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]},
+                 {'IpProtocol': 'tcp', 'FromPort': 3383, 'ToPort': 3383, 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]
+        for rule in rules:
+            # Inspect before each write so recovery from a partial rule batch is safe.
+            existing = aws(state, 'ec2', 'describe-security-groups', '--group-ids', state['security_group'])['SecurityGroups'][0]['IpPermissions']
+            present = any(x.get('IpProtocol') == rule['IpProtocol'] and x.get('FromPort') == rule['FromPort']
+                          and any(r.get('CidrIp') == rule['IpRanges'][0]['CidrIp'] for r in x.get('IpRanges', [])) for x in existing)
+            if not present:
+                aws(state, 'ec2', 'authorize-security-group-ingress', '--group-id', state['security_group'], '--ip-permissions', json.dumps([rule]))
+        state['rules_ready'] = True
+        save(state)
+    if not state.get('image'):
+        state['image'] = args.ami or aws(state, 'ssm', 'get-parameter', '--name',
+            '/aws/service/canonical/ubuntu/server/22.04/stable/current/amd64/hvm/ebs-gp2/ami-id')['Parameter']['Value']
+        image = aws(state, 'ec2', 'describe-images', '--image-ids', state['image'])['Images'][0]
+        if image['Architecture'] != 'x86_64':
+            raise RuntimeError('The AMI must be Ubuntu x86_64 for m5.xlarge.')
+        state['root_device'] = image['RootDeviceName']
+        save(state)
+    if not state.get('instance_id'):
+        disk = [{'DeviceName': state['root_device'], 'Ebs': {'VolumeSize': 2000, 'VolumeType': 'gp3',
+                'Iops': 3000, 'Throughput': 125, 'Encrypted': True, 'DeleteOnTermination': True}}]
+        launched = aws(state, 'ec2', 'run-instances', '--image-id', state['image'], '--instance-type', 'm5.xlarge',
+            '--count', '1', '--subnet-id', state['subnet'], '--security-group-ids', state['security_group'],
+            '--associate-public-ip-address', '--key-name', state['key_name'], '--client-token', state['token'],
+            '--block-device-mappings', json.dumps(disk), '--metadata-options', 'HttpTokens=required',
+            '--tag-specifications', json.dumps([{'ResourceType': 'instance', 'Tags': [{'Key': 'Name', 'Value': tag},
+               {'Key': 'RelayOwner', 'Value': state['token']}]}]), '--monitoring', 'Enabled=false')
+        state['instance_id'] = launched['Instances'][0]['InstanceId']
+        save(state)
+    print('Waiting for instance', state['instance_id'], '(rerun provision to resume if interrupted).', flush=True)
+    aws(state, 'ec2', 'wait', 'instance-running', '--instance-ids', state['instance_id'])
+    current = aws(state, 'ec2', 'describe-instances', '--instance-ids', state['instance_id'])['Reservations'][0]['Instances'][0]
+    if not current.get('PublicIpAddress'):
+        raise RuntimeError('Instance has no public IP. Check subnet routing; saved state prevents another launch.')
+    state['host'] = 'ubuntu@' + current['PublicIpAddress']
+    save(state)
+    print('Host ready:', state['host'], '\nNext: ./relay node\nCharges continue until explicit stop/teardown. No shutdown is scheduled.')
+
+
+def node(args):
+    state = load()
+    require('ssh')
+    if state['mode'] == 'adopted':
+        print('Existing deployment: check only; no installation, restart or configuration changes.')
+        print(remote(state, 'curl -fsS --max-time 15 http://127.0.0.1:3381/v1/info')[:6000])
+        print('Next: ./relay client')
+        return
+    if state.get('node_started'):
+        print('Node already started; leaving restore undisturbed. Use ./relay status for readiness.')
+        return
+    # Allow boot/SSH to become available, without treating a first refusal as deployment failure.
+    for attempt in range(30):
+        try:
+            remote(state, 'true')
+            break
+        except RuntimeError:
+            if attempt == 29:
+                raise
+            time.sleep(5)
+    print(remote(state, 'sudo cloud-init status --wait; command -v docker >/dev/null || '
+        '(sudo apt-get update -qq && sudo apt-get install -y docker.io docker-compose-v2); sudo systemctl enable --now docker'))
+    directory = validate_remote_dir(state['remote_dir'])
+    remote(state, 'sudo mkdir -p ' + shlex.quote(directory))
+    for name in ['compose.yml', 'validators.toml']:
+        contents = (ROOT / 'config' / 'snapchain' / name).read_text()
+        run(ssh_args(state) + ['sudo tee ' + shlex.quote(directory + '/' + name) + ' >/dev/null'], input=contents)
+    print(remote(state, 'cd ' + shlex.quote(directory) + ' && sudo docker compose -f compose.yml config --quiet && '
+          'sudo docker compose -f compose.yml up -d snapchain statsd'))
+    state['node_started'] = True
+    save(state)
+    print('Snapshot restore started. This can take hours. Next: ./relay client\nUse ./relay status --verify for two-sample sync and a real read.')
+
+
+def fetch_local(path, port=TUNNEL_PORT):
+    with urllib.request.urlopen('http://127.0.0.1:' + str(port) + path, timeout=18) as response:
+        return json.load(response)
+
+
+def tunnel(state):
+    require('ssh')
+    # Ask SSH's control socket, not an arbitrary process occupying the same port.
+    control = str(STATE_DIR / 'ssh-control')
+    if Path(control).exists():
+        result = subprocess.run(ssh_args(state)[:-1] + ['-S', control, '-O', 'check', state['host']], capture_output=True)
+        if result.returncode == 0:
+            return
+    try:
+        with socket.create_connection(('127.0.0.1', TUNNEL_PORT), timeout=1):
+            raise RuntimeError('The configured tunnel port is already occupied by an unmanaged tunnel. Stop that local tunnel first; Relay will not replace it.')
+    except (ConnectionRefusedError, socket.timeout):
+        pass
+    command = ssh_args(state)
+    run(command[:-1] + ['-M', '-S', control, '-fN', '-o', 'ExitOnForwardFailure=yes',
+        '-L', '127.0.0.1:' + str(TUNNEL_PORT) + ':127.0.0.1:3381', command[-1]])
+
+
+def client(args):
+    state = load()
+    require('node', 'npm', 'ssh')
+    version = tuple(int(n) for n in run(['node', '-p', 'process.versions.node']).split('.')[:2])
+    if version < (22, 12):
+        raise RuntimeError('Install Node.js 22.12+ (or a supported newer LTS).')
+    tunnel(state)
+    lock = (ROOT / 'client' / 'package-lock.json').read_bytes()
+    import hashlib
+    digest = hashlib.sha256(lock).hexdigest()
+    marker = STATE_DIR / 'client-lock'
+    if not (ROOT / 'client' / 'node_modules').is_dir() or not marker.exists() or marker.read_text() != digest:
+        run(['npm', 'ci'], capture=False, cwd=ROOT / 'client')
+        marker.write_text(digest)
+    environment = dict(os.environ, SNAPCHAIN_URL='http://127.0.0.1:' + str(TUNNEL_PORT))
+    print('Relay: http://127.0.0.1:' + os.environ.get('PORT', '5173') + '\nCtrl-C stops the local client; the remote node keeps running.', flush=True)
+    run(['npm', 'run', 'dev'], capture=False, cwd=ROOT / 'client', env=environment)
+
+
+def status(args):
+    state = load()
+    tunnel(state)
+    first = fetch_local('/v1/info')
+    print(json.dumps({'version': first.get('version'), 'shards': first.get('shardInfos', [])}, indent=2))
+    if not args.verify:
+        return
+    def near(info):
+        shards = info.get('shardInfos', [])
+        return bool(shards) and all(s['maxHeight'] > 0 and 0 <= s['blockDelay'] < 10 for s in shards)
+    if not near(first):
+        raise RuntimeError('Node is not near the chain head yet. Restore/catch-up may still be progressing.')
+    print('Taking a second sample in 15 seconds...', flush=True)
+    time.sleep(15)
+    second = fetch_local('/v1/info')
+    heights = {s['shardId']: s['maxHeight'] for s in first['shardInfos']}
+    if not near(second) or {s['shardId'] for s in second['shardInfos']} != set(heights) or not all(s['maxHeight'] > heights[s['shardId']] for s in second['shardInfos']):
+        raise RuntimeError('Sync not verified: shard delays/heights did not satisfy both samples.')
+    casts = fetch_local('/v1/castsByFid?fid=2&pageSize=1')
+    if not casts.get('messages'):
+        raise RuntimeError('Near head, but the real read returned no casts; inspect before claiming readiness.')
+    evidence = {'verified_at': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+                'first': first['shardInfos'], 'second': second['shardInfos'], 'read_fid': 2,
+                'read_hash': casts['messages'][0]['hash']}
+    (STATE_DIR / 'sync-evidence.json').write_text(json.dumps(evidence, indent=2) + '\n')
+    print('SYNC VERIFIED: every shard advanced, delays below 10s in both samples, real cast read succeeded.')
+
+
+def logs(args):
+    state = load()
+    directory = validate_remote_dir(state['remote_dir'])
+    compose = 'compose.yml' if state['mode'] == 'managed' else 'docker-compose.yml'
+    print(remote(state, 'cd ' + shlex.quote(directory) + ' && sudo docker compose -f ' + shlex.quote(compose) + ' logs --tail 40 snapchain'))
+
+
+def disconnect(args):
+    state = load()
+    control = str(STATE_DIR / 'ssh-control')
+    if Path(control).exists():
+        run(ssh_args(state)[:-1] + ['-S', control, '-O', 'exit', state['host']])
+    print('Local managed tunnel closed. Remote compute and storage still incur charges.')
+
+
+def lifecycle(args):
+    state = load()
+    if state['mode'] != 'managed':
+        raise RuntimeError('Lifecycle actions are disabled for adopted hosts. Manage your existing server yourself.')
+    identifier = state.get('instance_id')
+    if not identifier:
+        print('No instance recorded. Inspect partial resources in the private state: key_name/security_group. No resources deleted.')
+        return
+    if args.confirm != identifier:
+        print('PLAN:', args.command, identifier, '\nRepeat with --confirm ' + identifier + ' only after reviewing SETUP.md. No changes made.')
+        return
+    current = aws(state, 'ec2', 'describe-instances', '--instance-ids', identifier)['Reservations'][0]['Instances'][0]
+    if not any(t['Key'] == 'RelayOwner' and t['Value'] == state['token'] for t in current.get('Tags', [])):
+        raise RuntimeError('Ownership tag does not match this state. Refusing to act.')
+    action = 'stop-instances' if args.command == 'stop' else 'terminate-instances'
+    aws(state, 'ec2', action, '--instance-ids', identifier)
+    if args.command == 'destroy':
+        aws(state, 'ec2', 'wait', 'instance-terminated', '--instance-ids', identifier)
+        # Only resources this orchestrator recorded; the default VPC/subnet are never deleted.
+        if state.get('security_group'):
+            aws(state, 'ec2', 'delete-security-group', '--group-id', state['security_group'])
+        if state.get('key_name'):
+            aws(state, 'ec2', 'delete-key-pair', '--key-name', state['key_name'])
+        state['destroyed'] = True
+        save(state)
+        print('Instance termination verified; configured root disk deletes on termination. Inspect AWS for any retained disks/snapshots or other charges.')
+    else:
+        print('Stop requested. Retained EBS storage still costs money. No automatic restart/stop is scheduled.')
+
+
+def main():
+    parser = argparse.ArgumentParser(description='Relay: provision compute, start Snapchain, launch your client. No shutdown timers.')
+    commands = parser.add_subparsers(dest='command', required=True)
+    p = commands.add_parser('provision', help='Create paid AWS compute, or adopt an existing server')
+    p.add_argument('--ack-costs', action='store_true'); p.add_argument('--dry-run', action='store_true')
+    p.add_argument('--ssh-cidr'); p.add_argument('--region', default='us-east-1'); p.add_argument('--profile')
+    p.add_argument('--subnet-id'); p.add_argument('--ami'); p.add_argument('--existing-host'); p.add_argument('--key'); p.add_argument('--remote-dir')
+    p.set_defaults(func=provision)
+    commands.add_parser('node', help='Install a new managed node or check an adopted node').set_defaults(func=node)
+    commands.add_parser('client', help='Open managed tunnel, install locked dependencies and run Relay').set_defaults(func=client)
+    p = commands.add_parser('status', help='Inspect sync; --verify requires two samples and a real read')
+    p.add_argument('--verify', action='store_true'); p.set_defaults(func=status)
+    commands.add_parser('logs', help='Read the last 40 node log lines').set_defaults(func=logs)
+    commands.add_parser('disconnect', help='Close only the managed local SSH tunnel').set_defaults(func=disconnect)
+    for name in ['stop', 'destroy']:
+        p = commands.add_parser(name, help='Explicit managed-instance lifecycle action; no change without matching --confirm')
+        p.add_argument('--confirm'); p.set_defaults(func=lifecycle)
+    args = parser.parse_args()
+    STATE_DIR.mkdir(mode=0o700, parents=True, exist_ok=True)
+    # Do not hold an orchestration lock for the lifetime of the local dev server.
+    with contextlib.ExitStack() as stack:
+        if args.command != 'client':
+            lock = stack.enter_context(open(STATE_DIR / 'lock', 'a'))
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        args.func(args)
+
+if __name__ == '__main__':
+    try:
+        main()
+    except (RuntimeError, ValueError, OSError, KeyError, IndexError) as error:
+        print('Relay:', str(error), file=sys.stderr)
+        sys.exit(1)
+    except KeyboardInterrupt:
+        print('\nLocal command stopped. Remote resources were not stopped or deleted.')
