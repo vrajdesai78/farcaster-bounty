@@ -4,6 +4,7 @@ from pathlib import Path
 from types import SimpleNamespace
 import tempfile
 import unittest
+import fcntl
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -144,5 +145,16 @@ class SetupTests(unittest.TestCase):
             relay.status(SimpleNamespace(verify=True))
             tunnel.assert_not_called()
         self.assertTrue((self.directory/'sync-evidence.json').exists())
+
+    def test_diagnostics_work_while_an_install_holds_the_state_lock(self):
+        with open(self.directory/'lock', 'a') as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            for command in ['logs', 'status']:
+                with self.subTest(command=command), patch.object(relay, command) as diagnostic, patch('sys.argv', ['relay', command]):
+                    relay.main()
+                    diagnostic.assert_called_once()
+            with patch.object(relay, 'node') as install, patch('sys.argv', ['relay', 'node']):
+                with self.assertRaises(BlockingIOError): relay.main()
+                install.assert_not_called()
 
 if __name__ == '__main__': unittest.main()

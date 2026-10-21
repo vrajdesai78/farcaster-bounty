@@ -177,11 +177,11 @@ aws sts get-caller-identity</code></pre>
     <section id="proof" class="guide-section">
       <div class="section-intro"><h2>What we tested</h2><p>Local client verified 20 October. Hosted HTTPS client verified 21 October 2026.</p></div>
       <div class="section-body">
-        <p>Disposable FID <strong>3356280</strong> used our Snapchain 0.14.3 node. We confirmed casts and replies, added and removed reactions and follows, checked both app filters, and registered, imported and revoked app keys. All test app keys were revoked at cleanup; two labelled test casts remained readable.</p>
+        <p>Disposable FID <strong>3356280</strong> used our Snapchain 0.14.3 node. We confirmed casts and replies, added and removed reactions and follows, checked both app filters, and registered, imported and revoked app keys. All test app keys were revoked at cleanup; labelled test messages remained readable.</p>
         <p>On 21 October we repeated authorization, a new cast and reply, reactions, follows, app filters and revocation through HTTPS, with the client and node on the same EC2. Test keys were revoked again. The repository contains <code>docs/public/HOSTED-CLIENT-VERIFICATION.md</code> with the new message hashes.</p>
         <blockquote><p>Relay live verification — disposable test account. Posted through our own Snapchain read node; no third-party social API. 20 October 2026.</p><cite>Our test cast · FID 3356280</cite></blockquote>
         <details><summary>Check the message hashes</summary><p>Cast <code class="hash">0x4f8122235ed0a713b94f407cfdde8b55b35f0998</code></p><p>Reply <code class="hash">0xe1555d459cdba1b5d356d8bd29e1bcb1213545f3</code></p><p>Read them by loading FID 3356280 in your hosted client. The repository contains the full record in <code>docs/LIVE-CLIENT-VERIFICATION.md</code>.</p></details>
-        <p class="note">Still unverified: the full new-server installation, an independent person’s reproduction, a manual wallet-extension run and the positive recovery-phrase path on mainnet. Our clean-source test connected to the existing node. Live wallet signatures used an automated signing bridge. These results are not a claim that the bounty is complete.</p>
+        <p class="note">A separate fresh-session test passed all three commands on a new AWS server on 21 October without installation fixes. Snapshot restore, full sync and social actions on that server remain in progress. An independent human reproduction, manual wallet-extension run and live recovery-phrase test are still needed. Our completed wallet checks used an automated signing bridge.</p>
       </div>
     </section>
 
@@ -198,7 +198,7 @@ aws sts get-caller-identity</code></pre>
     </section>
 
     <section id="cleanup" class="guide-section">
-      <div class="section-intro"><h2>Stop and clean up</h2><p>Closing your browser leaves the AWS server running.</p></div>
+      <div class="section-intro"><h2>Stop and clean up</h2><p>Manage the client, compute and disk separately.</p></div>
       <div class="section-body">
         <p>Revoke test app keys. Closing the browser or setup terminal leaves the hosted client and node running. To stop just the hosted client, SSH to your server and run:</p><div class="copy-block"><pre><code id="hosted-stop-command">sudo docker compose -p relay-client -f /opt/relay-client/compose.yml stop</code></pre><button class="copy-button" data-copy="hosted-stop-command" data-run-on="server" aria-label="Copy hosted client stop command">Copy</button></div>
         <p>For a server created by Relay, preview either action first:</p>
@@ -211,8 +211,8 @@ aws sts get-caller-identity</code></pre>
     <section id="bounty" class="guide-section">
       <div class="section-intro"><h2>Before submitting</h2><p>This guide is part of our Farcaster bounty entry.</p></div>
       <div class="section-body">
-        <p>The remaining test is for another person to follow the guide on a fresh server and publicly vouch that it works. A fresh AI session can expose missing steps, but it does not replace that human endorsement.</p>
-        <ul class="plain-list"><li>Complete a fresh-server run and fix any missing instructions.</li><li>Arrange repository access for the tester. The submission requires an accessible MIT repository link; this repository is currently private.</li><li>Get the tester’s genuine public endorsement.</li><li>Verify the original cast’s timestamp and seven-day cutoff.</li><li>Reply to the original bounty with the microsite, repository and endorsement links.</li></ul>
+        <p>The bounty requires another human to build their own node and client with this guide, then publicly endorse it. Our automated fresh-server test does not satisfy that requirement.</p>
+        <ul class="plain-list"><li>Finish the fresh-server sync and client tests.</li><li>Arrange repository access for the tester. The submission requires an accessible MIT repository link; this repository is currently private.</li><li>Get the tester’s genuine public endorsement.</li><li>Verify the original cast’s timestamp and seven-day cutoff.</li><li>Reply to the original bounty with the microsite, repository and endorsement links.</li></ul>
         <p><a href="https://farcaster.xyz/balajis.eth/0x50184b62" target="_blank" rel="noreferrer">Original bounty</a> · <a href="https://farcaster.xyz/balajis.eth/0x0a05d5c8" target="_blank" rel="noreferrer">Author’s clarification</a></p>
       </div>
     </section>

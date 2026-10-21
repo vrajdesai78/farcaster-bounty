@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Relay's resumable local orchestrator. Python 3.9+, no third-party Python packages."""
 import argparse
+import base64
 import contextlib
 import fcntl
 import ipaddress
@@ -235,11 +236,6 @@ def node(args):
     print('Snapshot restore started. This can take hours. Next: ./relay client\nUse ./relay status --verify for two-sample sync and a real read.')
 
 
-def fetch_local(path, port=TUNNEL_PORT):
-    with urllib.request.urlopen('http://127.0.0.1:' + str(port) + path, timeout=18) as response:
-        return json.load(response)
-
-
 def tunnel(state):
     require('ssh')
     # Ask SSH's control socket, not an arbitrary process occupying the same port.
@@ -266,7 +262,6 @@ def local_client(args):
         raise RuntimeError('Install Node.js 22.12+ (or a supported newer LTS).')
     tunnel(state)
     lock = (ROOT / 'client' / 'package-lock.json').read_bytes()
-    import hashlib
     digest = hashlib.sha256(lock).hexdigest()
     marker = STATE_DIR / 'client-lock'
     if not (ROOT / 'client' / 'node_modules').is_dir() or not marker.exists() or marker.read_text() != digest:
@@ -382,7 +377,6 @@ def client(args):
     archive_path = STATE_DIR / 'hosted-source.tgz'
     try:
         client_source_archive(archive_path)
-        import base64
         run(ssh_args(state) + ['base64 -d | sudo tar -xz -C ' + directory + '/source'],
             input=base64.b64encode(archive_path.read_bytes()).decode('ascii'))
     finally:
@@ -397,7 +391,6 @@ def client(args):
     print('Building the hosted client. Snapchain is left running.', flush=True)
     print(remote(state, 'sudo sh -c ' + shlex.quote('cd ' + directory +
                  ' && docker compose -p relay-client config --quiet && docker compose -p relay-client up -d --build')))
-    import base64
     authorization = 'Basic ' + base64.b64encode((access['username'] + ':' + access['password']).encode()).decode()
     print('Checking HTTPS. Existing hosts must allow inbound TCP 80 and 443.', flush=True)
     for attempt in range(12):
@@ -515,9 +508,10 @@ def main():
         p.add_argument('--confirm'); p.set_defaults(func=lifecycle)
     args = parser.parse_args()
     STATE_DIR.mkdir(mode=0o700, parents=True, exist_ok=True)
-    # Do not hold an orchestration lock for the lifetime of the local dev server.
+    # Atomic state replacement lets diagnostics read safely during installation.
+    # The local dev server must not hold the lock for its entire lifetime either.
     with contextlib.ExitStack() as stack:
-        if args.command != 'client' or not args.local:
+        if args.command not in ('status', 'logs') and (args.command != 'client' or not args.local):
             lock = stack.enter_context(open(STATE_DIR / 'lock', 'a'))
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         args.func(args)

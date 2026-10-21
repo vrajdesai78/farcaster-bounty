@@ -1,6 +1,6 @@
 # Run your own Farcaster node and Relay client
 
-This public guide corresponds to the interactive tutorial in `site/`. It separates verified own-node client behavior from the new provisioner's still-pending clean-machine reproduction.
+This guide covers the same setup as the interactive tutorial in `site/`. See [verification status](docs/public/READINESS.md) for completed checks and remaining tests.
 
 ## Prerequisites and costs
 
@@ -172,4 +172,4 @@ Adopted hosts are never stopped/destroyed by Relay. The hosted client command in
 
 ## Evidence and remaining gates
 
-Read [live client evidence](docs/LIVE-CLIENT-VERIFICATION.md) and [publication readiness](docs/public/READINESS.md). Own-node sync and mainnet client actions were verified 20 October 2026. AWS provisioning has mocked interruption/idempotence/lifecycle coverage, but a fresh paid deployment and independent human reproduction are still required before claiming the bounty is complete. The exact bounty cutoff remains unverified. No endorsement or submission is fabricated.
+Read [live client evidence](docs/LIVE-CLIENT-VERIFICATION.md) and [publication readiness](docs/public/READINESS.md). Own-node sync and mainnet client actions were verified 20 October 2026. A separate fresh-session test passed provisioning, node installation and HTTPS client deployment on a new AWS server on 21 October without installation fixes. Full sync and social actions on that server remain in progress. An independent human reproduction is still required. The exact bounty cutoff remains unverified. No endorsement or submission is fabricated.

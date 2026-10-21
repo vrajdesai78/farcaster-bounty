@@ -32,7 +32,7 @@ The node step checks the adopted deployment without replacing or restarting it. 
 - Confirmation through message-shard events for social messages and signer-state reads for key changes.
 - Session-only signing material, local forgetting, self-revocation, and rejection of inactive keys.
 
-The original local client and real mainnet actions were verified on 20 October 2026. The hosted HTTPS client repeated the core flows on 21 October; see [hosted verification](docs/public/HOSTED-CLIENT-VERIFICATION.md). See [sanitized evidence](docs/LIVE-CLIENT-VERIFICATION.md) and [remaining verification limits](docs/public/READINESS.md). The new AWS provisioner has mocked acceptance coverage, not a fresh paid clean-machine reproduction. This is not a completed bounty submission.
+The original local client and real mainnet actions were verified on 20 October 2026. The hosted HTTPS client repeated the core flows on 21 October; see [hosted verification](docs/public/HOSTED-CLIENT-VERIFICATION.md). See [sanitized evidence](docs/LIVE-CLIENT-VERIFICATION.md) and [remaining verification limits](docs/public/READINESS.md). A separate fresh-session test passed all three commands on a new AWS server on 21 October, without installation fixes. Its snapshot restore, full-sync check and social-action checks are still in progress. This is not a completed bounty submission.
 
 ## Guide and development
 

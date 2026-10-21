@@ -20,7 +20,7 @@ export default function SignerDialog({ initialFid, close, connected }: { initial
   }
   return <dialog ref={dialog} onCancel={e=>{if(busy)e.preventDefault();else close();}} className="signer-dialog" aria-labelledby="signer-title">
     <div className="dialog-header"><span className="dialog-icon"><KeyRound size={22}/></span><button className="icon-button" aria-label="Close signer dialog" onClick={close} disabled={busy}><X size={20}/></button></div>
-    <h2 id="signer-title">A key to your Farcaster</h2><p>Authorize an app signer for an existing test account. Your keys stay in memory on this device and are forgotten when you close or reload Relay.</p>
+    <h2 id="signer-title">Connect an app signer</h2><p>Authorize an app signer for an existing test account. Your keys stay in memory on this device and are forgotten when you close or reload Relay.</p>
     <div className="segmented" aria-label="Authorization method">{(['wallet','import','recovery'] as const).map(m=><button key={m} disabled={busy} className={method===m?'selected':''} onClick={()=>{setMethod(m);setSecret('');setError('');}}>{m==='wallet'?'Browser wallet':m==='import'?'Existing signer':'Test recovery'}</button>)}</div>
     <form onSubmit={connect}>
       <label>Account FID<input type="number" min="1" step="1" required value={fid} onChange={e=>setFid(e.target.value)} disabled={busy}/></label>
