@@ -6,3 +6,5 @@ The original code and tutorial are MIT licensed; see LICENSE. This does not reli
 - Instrument Sans is distributed under the SIL Open Font License in `site/assets/FONT-LICENSE.txt` and `client/public/assets/FONT-LICENSE.txt`.
 - React, Vite, viem, @farcaster/core, Buffer, Faker and Lucide retain their package licenses. The lockfile pins dependency resolution; installing dependencies is subject to those licenses.
 - Client verification screenshots show public, clearly labelled content from the project's disposable mainnet test account. No endorsement is implied.
+
+- Concept diagrams are generated with Mermaid 12.2.0 (MIT) from the editable sources in `site/diagrams/`. The published site serves static SVGs; it does not load Mermaid or contact a diagram service. The optional rendering tool and pinned dependencies are in `scripts/diagrams/`.

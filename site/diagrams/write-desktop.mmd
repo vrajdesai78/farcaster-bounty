@@ -1,0 +1,20 @@
+sequenceDiagram
+accTitle: Publishing and confirming a cast
+accDescr: An app key signs a cast in the browser. Signed bytes go through the client service and read node to validators. The committed result returns before the client confirms.
+box rgb(248,245,255) Your browser
+participant B as Browser
+end
+box rgb(239,248,244) Your AWS server
+participant C as Client service
+participant S as Read node
+end
+box rgb(255,249,238) Farcaster network
+participant V as Validators
+end
+Note over B: App key signs the cast.<br/>Private key stays here.
+B->>C: 1 · Signed cast over HTTPS
+C->>S: 2 · Submit signed bytes
+S->>V: 3 · Forward message
+V-->>S: 4 · Committed block
+S-->>C: 5 · Matching result
+C-->>B: 6 · Confirmed

@@ -69,21 +69,28 @@
           <button id="sync-tab" role="tab" aria-selected="false" aria-controls="sync-path" tabindex="-1" data-path="sync">Sync the node</button>
         </div>
         <div id="read-path" role="tabpanel" aria-labelledby="read-tab">
-          <ol class="network-path read-path" aria-label="A feed request and response">
-            <li><strong>Your browser</strong><span>Ask for casts</span></li><li><strong>HTTPS</strong><span>Encrypted connection</span></li><li><strong>Client service</strong><span>On your EC2</span></li><li><strong>Your node</strong><span>Return stored data</span></li>
-          </ol>
+          <figure class="concept-diagram" data-diagram="read">
+            <picture><source media="(max-width: 1200px)" srcset="assets/diagrams/read-mobile.svg"><img src="assets/diagrams/read-desktop.svg" width="1257" height="190" loading="lazy" alt="Your browser asks the client service for casts; the service reads the node database and sends the posts back."></picture>
+            <figcaption><span>One server holds both the client service and your node’s database.</span><a href="assets/diagrams/read-desktop.svg" target="_blank" rel="noreferrer">Open full-size diagram</a></figcaption>
+          </figure>
+          <details class="diagram-steps"><summary>Read this diagram as steps</summary><ol><li>The browser requests casts for an FID over HTTPS.</li><li>The client service queries the Snapchain database on the same server.</li><li>The node returns the stored casts to the service.</li><li>The service returns the feed to your browser.</li></ol></details>
           <p class="path-caption"><strong>Try a real read:</strong> choose By FID, enter <code>3356280</code> and press Load feed. The request goes to your node; its stored casts come back along the same path. Reading does not need a wallet signature.</p>
         </div>
         <div id="write-path" role="tabpanel" aria-labelledby="write-tab" hidden>
-          <ol class="network-path" aria-label="A signed cast travels to validators">
-            <li><strong>Your browser</strong><span>Sign your cast</span></li><li><strong>HTTPS</strong><span>Encrypted connection</span></li><li><strong>Client service</strong><span>Pass signed bytes</span></li><li><strong>Your node</strong><span>Check and forward</span></li><li><strong>Validators</strong><span>Commit a block</span></li>
-          </ol>
+          <figure class="concept-diagram" data-diagram="write">
+            <picture><source media="(max-width: 1200px)" srcset="assets/diagrams/write-mobile.svg"><img src="assets/diagrams/write-desktop.svg" width="1040" height="536" loading="lazy" alt="The app key signs in your browser. Signed bytes go through your server to validators; a committed block returns before the client confirms the cast."></picture>
+            <figcaption><span>Follow the numbered arrows out to the network and back to your browser.</span><a href="assets/diagrams/write-desktop.svg" target="_blank" rel="noreferrer">Open full-size diagram</a></figcaption>
+          </figure>
+          <details class="diagram-steps"><summary>Read this diagram as steps</summary><ol><li>The browser signs the cast with its app key and sends signed bytes over HTTPS.</li><li>The client service submits those bytes to the read node.</li><li>The read node forwards the message to the network.</li><li>Validators commit the message in a block, which the node applies.</li><li>The client service checks for the matching result from the node.</li><li>The browser shows confirmation.</li></ol></details>
           <p class="path-caption"><strong>Real example:</strong> our test account posted a labelled verification cast through its own read node. Its app key signed the cast in the browser. Validators committed the message, and the node made the result readable. <a href="#proof">See the recorded cast hash</a>.</p>
-          <ol class="confirmation-flow" aria-label="Confirmation returns to your client"><li>Validators commit the message</li><li>Your node applies the block</li><li>The Farcaster client shows confirmation</li></ol>
           <p class="path-caption">“Accepted for forwarding” only means the node received the signed message. The Farcaster client waits for a matching result before saying the action is confirmed.</p>
         </div>
         <div id="sync-path" role="tabpanel" aria-labelledby="sync-tab" hidden>
-          <ol class="network-path" aria-label="A new node joins the network"><li><strong>Download a snapshot</strong><span>Fetch a recent copy of network state.</span></li><li><strong>Restore the database</strong><span>Unpack that copy onto your server’s disk.</span></li><li><strong>Catch up on blocks</strong><span>Apply what happened after the snapshot.</span></li><li><strong>Keep following</strong><span>Apply new blocks as validators commit them.</span></li></ol>
+          <figure class="concept-diagram" data-diagram="sync">
+            <picture><source media="(max-width: 1200px)" srcset="assets/diagrams/sync-mobile.svg"><img src="assets/diagrams/sync-desktop.svg" width="1246" height="240" loading="lazy" alt="Download a saved snapshot, restore it on disk, apply the missing blocks, then keep following newly committed blocks."></picture>
+            <figcaption><span>A snapshot starts the process. New blocks keep your node up to date.</span><a href="assets/diagrams/sync-desktop.svg" target="_blank" rel="noreferrer">Open full-size diagram</a></figcaption>
+          </figure>
+          <details class="diagram-steps"><summary>Read this diagram as steps</summary><ol><li>Download a recent saved snapshot of network state.</li><li>Restore that database onto the server disk.</li><li>Apply committed blocks made after the snapshot.</li><li>Keep applying new committed blocks. Verify every reported shard and a real read.</li></ol></details>
           <p class="path-caption"><strong>Example:</strong> while your snapshot downloads, someone posts a new cast. That cast is newer than the saved copy. Catch-up brings the node forward so it can return newer posts too. Finishing the download is only the first stage.</p>
           <p class="path-caption">A shard is a separate lane of the chain. <code>./relay status --verify</code> checks that every reported shard is near the head and advancing, then reads a real cast. <a href="#sync">Check your node’s progress</a>.</p>
         </div>
@@ -182,12 +189,20 @@ cd farcaster-bounty</code></pre><button class="copy-button" data-copy="clone-com
             <button id="storage-tab" role="tab" aria-selected="false" aria-controls="storage-flow" tabindex="-1" data-concept="storage">Account storage vs disk</button>
           </div>
           <div id="keys-flow" role="tabpanel" aria-labelledby="keys-tab">
-            <ol class="network-path" aria-label="Authorize a separate key for everyday posting"><li><strong>Custody wallet</strong><span>Approve a new app key, its permissions and inactivity window.</span></li><li><strong>Your node</strong><span>Forward the signed KEY_ADD and check the key becomes registered.</span></li><li><strong>App key in your browser</strong><span>Sign casts, reactions and follows without another wallet prompt each time.</span></li></ol>
+            <figure class="concept-diagram" data-diagram="keys">
+            <picture><source media="(max-width: 1200px)" srcset="assets/diagrams/keys-mobile.svg"><img src="assets/diagrams/keys-desktop.svg" width="1156" height="300" loading="lazy" alt="The browser creates a separate app key. The custody wallet signs its authorization. The network registers it, then the app key signs everyday actions. Private keys stay on your device."></picture>
+            <figcaption><span>Authorize once with the wallet; use the separate app key for everyday actions.</span><a href="assets/diagrams/keys-desktop.svg" target="_blank" rel="noreferrer">Open full-size diagram</a></figcaption>
+          </figure>
+          <details class="diagram-steps"><summary>Read this diagram as steps</summary><ol><li>Create a separate app key in the browser.</li><li>The custody wallet signs permission for its public key, scopes and inactivity window.</li><li>Submit the signed KEY_ADD and confirm that the key is registered.</li><li>Use the registered app key to sign allowed social actions. Private keys stay on your device.</li></ol></details>
             <p class="path-caption"><strong>Real example:</strong> FID <code>3356280</code> authorized a separate app key, posted a cast and revoked the key afterward. The FID stayed the same throughout. This registration was gasless; no OP Mainnet transaction was needed for the app key.</p>
             <p class="path-caption">The private app key is created and kept in your browser’s memory. Your wallet signs the permission; the server receives signed messages, not the wallet’s recovery phrase. Reloading forgets the local key. Revoking removes its network permission.</p>
           </div>
           <div id="storage-flow" role="tabpanel" aria-labelledby="storage-tab" hidden>
-            <ol class="network-path" aria-label="Storage rent changes an account allowance"><li><strong>Rent account storage</strong><span>Pay through the protocol’s contracts on OP Mainnet.</span></li><li><strong>Your FID gets an allowance</strong><span>Separate limits apply to casts, follows and reactions.</span></li><li><strong>Use any client</strong><span>The same account limits apply in the Farcaster client and other apps.</span></li></ol>
+            <figure class="concept-diagram" data-diagram="storage">
+            <picture><source media="(max-width: 1200px)" srcset="assets/diagrams/storage-mobile.svg"><img src="assets/diagrams/storage-desktop.svg" width="568" height="382" loading="lazy" alt="Two separate purchases: protocol storage rent gives your FID a message allowance, while AWS disk holds your node database. More disk does not grant more account allowance."></picture>
+            <figcaption><span>These are two separate bills. There is no path from a bigger disk to more casts.</span><a href="assets/diagrams/storage-desktop.svg" target="_blank" rel="noreferrer">Open full-size diagram</a></figcaption>
+          </figure>
+          <details class="diagram-steps"><summary>Read this diagram as steps</summary><ol><li>Protocol storage rent gives the FID limits for social messages, shared across clients.</li><li>Separately, AWS disk capacity holds the node’s database.</li><li>Increasing disk capacity does not increase the FID’s allowance.</li></ol></details>
             <p class="path-caption"><strong>Real node response, 21 October 2026:</strong> FID <code>3356280</code> reported <code>CASTS: used 4, limit 100</code>. That describes this account at this check; it is not a fixed quota for every user. Query your own FID for its current limits.</p>
             <p class="note">AWS disk is a separate bill. Its job is to hold the node’s database. Increasing the server’s 2,000 GiB disk does not buy more cast allowance for your FID. Registering an app key is gasless; purchasing account storage is separate.</p>
           </div>

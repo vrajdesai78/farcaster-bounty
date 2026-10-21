@@ -1,0 +1,21 @@
+flowchart LR
+accTitle: A wallet authorizes a separate app key
+accDescr: The browser generates an app key. The custody wallet approves that key’s public identity and limited permissions. A signed KEY_ADD is submitted and confirmed, after which the app key can sign everyday actions. Neither private key is sent to the server.
+subgraph B["Your browser or wallet · private keys stay here"]
+ key["1 · Create an app key"]:::device
+ wallet["2 · Custody wallet approves"]:::device
+ everyday["4 · App key signs everyday posts"]:::done
+end
+subgraph S["Your server + Farcaster network"]
+ registered["3 · Register and confirm KEY_ADD"]:::data
+end
+key -->|"Public key + permissions"| wallet
+wallet -->|"Signed authorization · no gas"| registered
+registered -->|"Key is active"| everyday
+style B fill:#faf8ff,stroke:#c9bce3
+style S fill:#f5faf8,stroke:#aac7be
+classDef device fill:#f1edff,stroke:#795acb,color:#24183e,stroke-width:1.5px
+classDef service fill:#ffffff,stroke:#8b819d,color:#262330,stroke-width:1.4px
+classDef data fill:#eaf6f2,stroke:#3c7b68,color:#173c31,stroke-width:1.5px
+classDef network fill:#fff5e5,stroke:#997033,color:#493414,stroke-width:1.5px
+classDef done fill:#eaf6f2,stroke:#3c7b68,color:#173c31,stroke-width:1.5px

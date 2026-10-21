@@ -1,0 +1,22 @@
+flowchart TB
+accTitle: Publishing and confirming a cast
+accDescr: An app key signs a cast in the browser. The client service forwards signed bytes to the read node. Validators commit the message, the node applies its block, and the browser confirms the result.
+browser["1 · App key signs a cast"]:::device
+subgraph S["Your AWS server"]
+ client["2 · Client passes signed bytes"]:::service
+ node[("3 · Read node forwards message")]:::data
+end
+validators["4 · Validators commit a block"]:::network
+applied[("5 · Same node applies the block")]:::data
+confirmed["6 · Browser confirms the result"]:::done
+browser -->|"HTTPS · private key stays behind"| client
+client --> node
+node --> validators
+validators --> applied
+applied -->|"Client checks the matching result"| confirmed
+style S fill:#f5faf8,stroke:#aac7be
+classDef device fill:#f1edff,stroke:#795acb,color:#24183e,stroke-width:1.5px
+classDef service fill:#ffffff,stroke:#8b819d,color:#262330,stroke-width:1.4px
+classDef data fill:#eaf6f2,stroke:#3c7b68,color:#173c31,stroke-width:1.5px
+classDef network fill:#fff5e5,stroke:#997033,color:#493414,stroke-width:1.5px
+classDef done fill:#eaf6f2,stroke:#3c7b68,color:#173c31,stroke-width:1.5px
