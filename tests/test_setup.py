@@ -98,4 +98,51 @@ class SetupTests(unittest.TestCase):
             with self.assertRaises(RuntimeError): relay.validate_remote_dir(value)
         self.assertEqual(relay.validate_remote_dir('/opt/snapchain'),'/opt/snapchain')
 
+    def test_hosted_domain_needs_no_purchased_domain_and_rejects_shell_input(self):
+        state={'host':'ubuntu@8.8.8.8'}
+        self.assertEqual(relay.client_domain(state),'relay-8-8-8-8.sslip.io')
+        self.assertEqual(relay.client_domain(state,'client.example.com'),'client.example.com')
+        for value in ['https://client.example.com','x;echo.example.com','*.example.com','a..example.com','x.example.com/path']:
+            with self.assertRaises(RuntimeError): relay.client_domain(state,value)
+        with self.assertRaises(RuntimeError): relay.client_domain({'host':'ubuntu@127.0.0.1'})
+
+    def test_hosted_dns_rejects_wrong_server_before_login_is_sent(self):
+        with patch.object(relay.socket,'gethostbyname',return_value='8.8.8.8'), patch.object(relay.socket,'getaddrinfo',return_value=[(2,1,6,'',('1.1.1.1',0))]):
+            with self.assertRaisesRegex(RuntimeError,'DNS must point directly'): relay.verify_client_dns({'host':'ubuntu@8.8.8.8'},'client.example.com')
+        with patch.object(relay.socket,'gethostbyname',return_value='8.8.8.8'), patch.object(relay.socket,'getaddrinfo',return_value=[(2,1,6,'',('8.8.8.8',0))]):
+            relay.verify_client_dns({'host':'ubuntu@8.8.8.8'},'client.example.com')
+
+    def test_hosted_source_omits_wallet_state_env_and_dependencies(self):
+        import tarfile
+        for name in ['client/package.json','client/package-lock.json','client/index.html','client/tsconfig.json','client/vite.config.ts','client/server/production.mjs','client/src/App.tsx','client/public/favicon.svg','config/client/Dockerfile','client/.env','client/node_modules/private.js','.snapchain-aws/test-account.json','.relay-state/hosted-access.json']:
+            path=self.directory/name;path.parent.mkdir(parents=True,exist_ok=True);path.write_text('fixture')
+        archive=self.directory/'source.tgz'
+        with patch.object(relay,'ROOT',self.directory): relay.client_source_archive(archive)
+        with tarfile.open(archive) as packed:
+            names=packed.getnames()
+        self.assertIn('client/server/production.mjs',names)
+        self.assertIn('config/client/Dockerfile',names)
+        self.assertFalse(any('.env' in n or 'node_modules' in n or 'hosted-access' in n or 'test-account' in n for n in names))
+        self.assertEqual(archive.stat().st_mode & 0o777,0o600)
+
+    def test_hosted_firewall_changes_require_instance_ownership(self):
+        state={'mode':'managed','instance_id':'i-test','token':'owner','security_group':'sg-test'}
+        with patch.object(relay,'aws') as aws:
+            aws.return_value={'Reservations':[{'Instances':[{'Tags':[{'Key':'RelayOwner','Value':'other'}]}]}]}
+            with self.assertRaises(RuntimeError): relay.hosted_web_rules(state)
+            self.assertEqual(aws.call_count,1)
+        with patch.object(relay,'aws') as aws:
+            relay.hosted_web_rules({'mode':'adopted'})
+            aws.assert_not_called()
+
+    def test_sync_check_uses_short_ssh_queries_without_local_tunnel(self):
+        import json
+        first={'version':'fixture','shardInfos':[{'shardId':0,'maxHeight':1,'blockDelay':0},{'shardId':1,'maxHeight':2,'blockDelay':1}]}
+        second={'version':'fixture','shardInfos':[{'shardId':0,'maxHeight':2,'blockDelay':1},{'shardId':1,'maxHeight':3,'blockDelay':0}]}
+        relay.save({'mode':'adopted','host':'ubuntu@example.org'})
+        with patch.object(relay,'remote',side_effect=[json.dumps(first),json.dumps(second),json.dumps({'messages':[{'hash':'fixture'}]})]), patch.object(relay,'tunnel') as tunnel, patch.object(relay.time,'sleep'):
+            relay.status(SimpleNamespace(verify=True))
+            tunnel.assert_not_called()
+        self.assertTrue((self.directory/'sync-evidence.json').exists())
+
 if __name__ == '__main__': unittest.main()

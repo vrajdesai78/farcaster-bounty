@@ -1,0 +1,16 @@
+{
+    admin off
+    servers {
+        protocols h1 h2
+    }
+}
+{$RELAY_DOMAIN} {
+    encode zstd gzip
+    request_body {
+        max_size 64KB
+    }
+    header Strict-Transport-Security "max-age=31536000"
+    reverse_proxy 127.0.0.1:3080 {
+        header_up X-Forwarded-For {remote_host}
+    }
+}

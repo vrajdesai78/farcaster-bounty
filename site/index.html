@@ -16,7 +16,7 @@
 <header class="topbar">
   <a class="brand" href="#start" aria-label="Relay home"><span class="brand-mark" aria-hidden="true"><i></i><i></i></span>Relay</a>
   <nav aria-label="Top navigation"><a href="#how-it-works">How it works</a><a href="#prerequisites">Setup</a><a href="#proof">What we tested</a></nav>
-  <a class="button primary" href="http://127.0.0.1:5173/" aria-describedby="local-help">Open local client <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 15 15 5M5 5h10v10"/></svg></a>
+  <a class="button primary" href="#client" aria-describedby="hosted-help">Use Relay <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 15 15 5M5 5h10v10"/></svg></a>
 </header>
 <div class="layout">
   <aside class="chapter-rail">
@@ -33,7 +33,7 @@
       <a href="#cleanup">Stop and clean up</a>
       <a href="#bounty">Bounty checklist</a>
     </nav>
-    <div class="rail-foot">Snapchain 0.14.3<br>Client verified 20 Oct 2026</div>
+    <div class="rail-foot">Snapchain 0.14.3<br>Hosted client verified 21 Oct 2026</div>
   </aside>
   <main id="main">
     <details class="mobile-chapters">
@@ -46,7 +46,7 @@
     <section id="start" class="hero">
       <div class="hero-copy">
         <h1>Run your own<br> Farcaster node.</h1>
-        <p class="lede">Run a Snapchain node on AWS. Use Relay on your computer to read casts, post and follow people.</p>
+        <p class="lede">Run a Snapchain node on AWS. Open Relay in your browser to read casts, post and follow people.</p>
         <div class="hero-actions"><a class="button primary" href="#prerequisites">Start the setup <span aria-hidden="true">↓</span></a><a class="text-link" href="#how-it-works">Understand the pieces</a></div>
         <p class="hero-note">Three commands start the setup. Mainnet sync takes hours, and the AWS server costs money.</p>
       </div>
@@ -60,8 +60,8 @@
       <div class="section-intro"><h2>How the pieces connect</h2><p>Farcaster is the social protocol. Snapchain keeps its shared social data in sync. Relay is the client we built to use it.</p></div>
       <div class="places">
         <div><h3>This website</h3><p>Explains the setup. It is hosted on Vercel and never connects to your node or asks for wallet keys.</p></div>
-        <div><h3>Your computer</h3><p>Runs the Relay client and local proxy. An encrypted SSH tunnel connects them to your server.</p></div>
-        <div><h3>Your AWS server</h3><p>Runs a Snapchain read node. It stores network state, answers queries and forwards signed actions to validators.</p></div>
+        <div><h3>Your computer</h3><p>Runs the setup commands. After deployment, you can close the terminal and use Relay in a browser.</p></div>
+        <div><h3>Your AWS server</h3><p>Runs Snapchain and the Relay client service. HTTPS connects your browser to Relay; the service reaches the node internally.</p></div>
       </div>
       <div class="path-explainer">
         <div class="mode-tabs" role="tablist" aria-label="Follow a network request">
@@ -70,13 +70,13 @@
         </div>
         <div id="read-path" role="tabpanel" aria-labelledby="read-tab">
           <ol class="network-path read-path" aria-label="A feed request and response">
-            <li><strong>Relay client</strong><span>Ask for casts</span></li><li><strong>Local proxy</strong><span>Pass the request</span></li><li><strong>SSH tunnel</strong><span>Encrypted connection</span></li><li><strong>Your node</strong><span>Return stored data</span></li>
+            <li><strong>Your browser</strong><span>Ask for casts</span></li><li><strong>HTTPS</strong><span>Encrypted connection</span></li><li><strong>Relay service</strong><span>On your EC2</span></li><li><strong>Your node</strong><span>Return stored data</span></li>
           </ol>
-          <p class="path-caption">Enter an FID in Relay. The node returns that account’s casts through the same connection. Relay displays them in your browser.</p>
+          <p class="path-caption">Enter an FID in Relay. Relay reads from the node on the same server and returns the casts to your browser.</p>
         </div>
         <div id="write-path" role="tabpanel" aria-labelledby="write-tab" hidden>
           <ol class="network-path" aria-label="A signed cast travels to validators">
-            <li><strong>Relay client</strong><span>Sign your cast</span></li><li><strong>Local proxy</strong><span>Pass signed bytes</span></li><li><strong>SSH tunnel</strong><span>Encrypted connection</span></li><li><strong>Your node</strong><span>Check and relay</span></li><li><strong>Validators</strong><span>Commit a block</span></li>
+            <li><strong>Your browser</strong><span>Sign your cast</span></li><li><strong>HTTPS</strong><span>Encrypted connection</span></li><li><strong>Relay service</strong><span>Pass signed bytes</span></li><li><strong>Your node</strong><span>Check and relay</span></li><li><strong>Validators</strong><span>Commit a block</span></li>
           </ol>
           <p class="path-caption">Your node follows the committed block. Relay checks for the matching result before confirming the post. “Accepted for relay” alone is not confirmation.</p>
         </div>
@@ -88,27 +88,25 @@
       <div class="section-intro"><h2>Before you start</h2><p>Run the commands on your computer. The helper handles the new server.</p></div>
       <div class="section-body">
         <ol class="walkthrough">
-          <li><strong>Install the local tools.</strong> Use macOS, Linux or WSL2. You need <a href="https://git-scm.com/downloads" target="_blank" rel="noreferrer">Git</a>, <a href="https://www.python.org/downloads/" target="_blank" rel="noreferrer">Python 3.9+</a>, OpenSSH and <a href="https://nodejs.org/en/download" target="_blank" rel="noreferrer">Node.js 22.12+ or a newer supported LTS</a>. The new-server path also needs <a href="https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html" target="_blank" rel="noreferrer">AWS CLI v2</a> with your AWS account configured.</li>
+          <li><strong>Install the local tools.</strong> Use macOS, Linux or WSL2. You need <a href="https://git-scm.com/downloads" target="_blank" rel="noreferrer">Git</a>, <a href="https://www.python.org/downloads/" target="_blank" rel="noreferrer">Python 3.9+</a> and OpenSSH. Node.js is installed inside the server’s client build container; you do not need it locally for the hosted setup. The new-server path also needs <a href="https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html" target="_blank" rel="noreferrer">AWS CLI v2</a> with your AWS account configured.</li>
           <li><strong>Get repository access.</strong> <a href="https://github.com/vrajdesai78/farcaster-bounty" target="_blank" rel="noreferrer">The repository is private</a>. Ask the owner for access before cloning. There is no public source download.</li>
         </ol>
         <div class="copy-block"><pre><code id="clone-command">git clone https://github.com/vrajdesai78/farcaster-bounty.git
 cd farcaster-bounty</code></pre><button class="copy-button" data-copy="clone-command" aria-label="Copy clone commands">Copy</button></div>
         <p>Check the installed tools before creating a server:</p>
         <pre><code>python3 --version
-node --version
-npm --version
 ssh -V
 aws --version
 aws sts get-caller-identity</code></pre>
         <p>The last command should identify your intended AWS account. It does not create resources. Keep that output private. If it fails, finish <a href="https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html" target="_blank" rel="noreferrer">AWS CLI configuration</a> first.</p>
         <details><summary>What will AWS create and charge for?</summary><p>One Ubuntu 22.04 <code>m5.xlarge</code> server: 4 vCPU, 16 GB RAM and a 2,000 GiB encrypted gp3 disk at 3,000 IOPS / 125 MiB/s. The helper also creates an SSH key pair and security group. It uses an existing default VPC/subnet. It creates no NAT gateway, load balancer or paid monitoring.</p><p>You pay for compute, the full provisioned disk, public IPv4 and applicable transfer/taxes. Stopping the server leaves disk charges. No automatic shutdown is installed. Review the <a href="https://calculator.aws/" target="_blank" rel="noreferrer">AWS calculator</a> before provisioning.</p></details>
-        <details><summary>Which AWS permissions and network access are needed?</summary><p>Your AWS identity needs EC2 describe, key-pair, security-group, instance-launch and tagging permissions, plus <code>ssm:GetParameter</code> to find Ubuntu’s public image. Cleanup needs stop/terminate and key-pair/security-group deletion permissions. The exact actions are listed in the repository’s <code>SETUP.md</code>.</p><p>SSH is restricted to your public IPv4 /32. Peer ports UDP 3382 and TCP 3383 are public. The node’s HTTP API and metrics stay on the server’s loopback interface. AWS credentials stay on your computer.</p></details>
+        <details><summary>Which AWS permissions and network access are needed?</summary><p>Your AWS identity needs EC2 describe, key-pair, security-group, instance-launch and tagging permissions, plus <code>ssm:GetParameter</code> to find Ubuntu’s public image. Cleanup needs stop/terminate and key-pair/security-group deletion permissions. The exact actions are listed in the repository’s <code>SETUP.md</code>.</p><p>SSH is restricted to your public IPv4 /32. Peer ports UDP 3382 and TCP 3383 are public. The node’s HTTP API and metrics stay on the server’s loopback interface. Relay opens TCP 80 and 443 for HTTPS during client installation on a managed server. AWS credentials stay on your computer.</p></details>
         <p class="note">Reading needs no Farcaster account. Posting needs a disposable FID with active account storage and its custody wallet. Owning a server does not create an account or pay for its storage.</p>
       </div>
     </section>
 
     <section id="commands" class="guide-section">
-      <div class="section-intro"><h2>Three commands</h2><p>Use a new AWS server, or connect to a node you already run.</p><p>Keep the same repository folder and saved state when resuming an interrupted setup.</p></div>
+      <div class="section-intro"><h2>Three commands</h2><p>Use a new AWS server, or add the client beside a node you already run.</p><p>Keep the same repository folder and saved state when resuming an interrupted setup.</p></div>
       <div class="section-body">
         <div class="workbench">
           <div class="mode-tabs" role="tablist" aria-label="Server setup method">
@@ -117,12 +115,12 @@ aws sts get-caller-identity</code></pre>
           </div>
           <div id="setup-fields" role="tabpanel" aria-labelledby="aws-tab">
             <div id="aws-fields"><label for="ssh-cidr">Your public IPv4 address</label><input id="ssh-cidr" autocomplete="off" placeholder="e.g. 203.0.113.10" inputmode="decimal" aria-describedby="ip-help"><p id="ip-help" class="field-help">Find it at <a href="https://checkip.amazonaws.com/" target="_blank" rel="noreferrer">checkip.amazonaws.com</a>. /32 is added to restrict SSH to that address. This page only puts the value in your command.</p></div>
-            <div id="existing-fields" hidden><label for="ssh-host">SSH target</label><input id="ssh-host" placeholder="ubuntu@your-server.example" autocomplete="off"><label for="ssh-key">Private SSH key path on your computer</label><input id="ssh-key" value="~/.ssh/id_ed25519" autocomplete="off"><p class="field-help">Requires a node already running at <code>/opt/snapchain</code>. This option only checks it; it does not install or restart anything. <code>--remote-dir</code> selects a different location.</p></div>
+            <div id="existing-fields" hidden><label for="ssh-host">SSH target</label><input id="ssh-host" placeholder="ubuntu@your-server.example" autocomplete="off"><label for="ssh-key">Private SSH key path on your computer</label><input id="ssh-key" value="~/.ssh/id_ed25519" autocomplete="off"><p class="field-help">Requires a node already running at <code>/opt/snapchain</code>. The node command only checks it. The client command installs Relay separately without replacing or restarting Snapchain. Existing hosts must allow inbound TCP 80 and 443. <code>--remote-dir</code> selects a different location.</p></div>
           </div>
           <ol class="command-steps">
             <li><div><h3 id="first-step-title">Create the server</h3><div class="code-line"><code id="provision-command">./relay provision --ack-costs --ssh-cidr YOUR_IP/32</code><button class="copy-button" aria-label="Copy provision command" data-copy="provision-command">Copy</button></div><p id="provision-description" class="step-help">Creates paid AWS resources in us-east-1 by default. Saves server details and the private SSH key in .relay-state/.</p></div></li>
             <li><div><h3>Start Snapchain</h3><div class="code-line"><code id="node-command">./relay node</code><button class="copy-button" aria-label="Copy node command" data-copy="node-command">Copy</button></div><p id="node-description" class="step-help">Installs Docker and starts the pinned node. Snapshot restore begins on the server.</p></div></li>
-            <li><div><h3>Start the client</h3><div class="code-line"><code id="client-command">./relay client</code><button class="copy-button" aria-label="Copy client command" data-copy="client-command">Copy</button></div><p class="step-help">Opens the SSH tunnel and starts Relay at <a href="http://127.0.0.1:5173/">127.0.0.1:5173</a>. Keep this terminal running. Reads may fail until sync finishes.</p></div></li>
+            <li><div><h3>Start the client</h3><div class="code-line"><code id="client-command">./relay client</code><button class="copy-button" aria-label="Copy client command" data-copy="client-command">Copy</button></div><p class="step-help">Builds the client on your EC2 and prints its HTTPS URL. A free IP-based hostname is used by default. The login appears in your interactive terminal and is saved privately on your computer. Your terminal can close when installation finishes.</p></div></li>
           </ol>
           <p id="command-status" role="status" class="field-help">Run these from the repository folder on your computer.</p>
         </div>
@@ -136,7 +134,7 @@ aws sts get-caller-identity</code></pre>
         <ol class="restore-stages"><li><strong>Download</strong><span>Get snapshot chunks.</span></li><li><strong>Restore</strong><span>Decompress and write the database.</span></li><li><strong>Catch up</strong><span>Apply blocks created since the snapshot.</span></li></ol>
         <p>This can take hours. Quiet extraction logs can still mean work is progressing. Check bounded logs before restarting:</p>
         <div class="copy-block"><pre><code id="logs-command">./relay logs</code></pre><button class="copy-button" data-copy="logs-command" aria-label="Copy logs command">Copy</button></div>
-        <p>In a second terminal, from the same repository folder, check readiness:</p>
+        <p>From the same repository folder, check readiness:</p>
         <div class="copy-block"><pre><code id="verify-command">./relay status --verify</code></pre><button class="copy-button" data-copy="verify-command" aria-label="Copy verification command">Copy</button></div>
         <table><caption>A successful sync check requires all three</caption><thead><tr><th>Check</th><th>Result</th></tr></thead><tbody><tr><td>Each shard’s <code>blockDelay</code></td><td>Below 10 seconds in both samples</td></tr><tr><td>Each shard’s <code>maxHeight</code></td><td>Advances across samples taken 15 seconds apart</td></tr><tr><td>Real query</td><td>A cast comes back from your node</td></tr></tbody></table>
         <p>Shards are separate lanes of the chain. Check every reported shard. The helper saves the result in <code>.relay-state/sync-evidence.json</code>. API errors during restore are possible; they do not establish whether restore is progressing.</p>
@@ -144,17 +142,19 @@ aws sts get-caller-identity</code></pre>
     </section>
 
     <section id="client" class="guide-section">
-      <div class="section-intro"><h2>Use the client</h2><p>Start with a read. Then authorize a test account and make one round trip.</p></div>
+      <div class="section-intro"><h2>Use the client</h2><p>Open the HTTPS URL printed by the third command. Sign in, read a cast, then authorize a test account.</p></div>
       <div class="section-body">
         <ol class="walkthrough">
-          <li><strong>Read casts.</strong> Open <a href="http://127.0.0.1:5173/">your local client</a>. Choose By FID, enter <code>3356280</code> and load the two labelled test casts. Try Following for another account. It combines recent casts from followed accounts in bounded batches, in chronological order.</li>
+          <li><strong>Sign in to your hosted client.</strong> Open the URL printed by <code>./relay client</code>. Use the generated login shown in your terminal. If it was not displayed, retrieve it locally with <code>./relay client --credentials</code>. This server login is separate from your Farcaster wallet. Keep it private.</li>
+          <li><strong>Read casts.</strong> Choose By FID, enter <code>3356280</code> and load the labelled test casts. Try Following for another account. It combines recent casts from followed accounts in bounded batches, in chronological order.</li>
           <li><strong>Authorize your test account.</strong> Choose Connect signer → Browser wallet. Use the custody wallet for your own FID with active storage. Two wallet signatures approve a scoped app key. Adding this key is gasless; creating an FID and buying storage are separate paid steps.</li>
           <li><strong>Post and read it back.</strong> Write “Testing my own Farcaster node.” Relay signs it in the browser, sends it to your node and waits for confirmation. Load your FID and check the cast appears.</li>
           <li><strong>Try a reply, reaction and follow.</strong> Reply to your cast. Like it, then unlike it. Recast and undo. Follow a test target, check the result, then unfollow.</li>
           <li><strong>Filter by app.</strong> Enter a requesting app’s FID and choose Include only or Exclude. With our self-authorized flow, use your own FID. Unknown or removed signer attribution is left out of filtered results.</li>
           <li><strong>Revoke the test key.</strong> Forget clears this device’s session. Revoke cancels the key’s network authorization too. A revoked key should fail if imported again.</li>
         </ol>
-        <p id="local-help" class="note">“Open local client” opens your own computer’s port 5173. It works after <code>./relay client</code> is running. Vercel hosts this guide; it does not run your client proxy, SSH tunnel or node.</p>
+        <p id="hosted-help" class="note">Vercel hosts this guide; your EC2 runs the client and node. The browser keeps your signing key in memory and sends signed actions over HTTPS. You can use the client after closing the setup terminal.</p>
+        <details><summary>Do I need a domain or a local client?</summary><p>Relay supplies a free sslip.io hostname based on the server’s public IPv4. Caddy obtains and renews its HTTPS certificate. This depends on public DNS and certificate-authority availability. A changed EC2 public IP needs an updated deployment URL.</p><p>For your own domain, point its A record to the server, then use <code>./relay client --domain client.example.com</code>. For local development instead, install Node.js 22.12+ or a newer supported LTS and use <code>./relay client --local</code>; that optional mode uses port 5173 and an SSH tunnel.</p></details>
         <details><summary>I need a new test account or already have a signer</summary><p>The client authorizes an existing FID. Repository collaborators can follow <code>SETUP.md → Optional new disposable account</code> to create one separately. A new account needs ETH on OP Mainnet for registration and storage. Your node does not waive those costs.</p><p>Existing signer accepts a registered 32-byte Ed25519 app key. It is different from a custody-wallet private key. Prefer the browser wallet for authorization. The test recovery option is for a disposable account only; never enter a recovery phrase into this public website.</p></details>
       </div>
     </section>
@@ -175,11 +175,12 @@ aws sts get-caller-identity</code></pre>
     </section>
 
     <section id="proof" class="guide-section">
-      <div class="section-intro"><h2>What we tested</h2><p>Real mainnet actions, verified on 20 October 2026.</p></div>
+      <div class="section-intro"><h2>What we tested</h2><p>Local client verified 20 October. Hosted HTTPS client verified 21 October 2026.</p></div>
       <div class="section-body">
         <p>Disposable FID <strong>3356280</strong> used our Snapchain 0.14.3 node. We confirmed casts and replies, added and removed reactions and follows, checked both app filters, and registered, imported and revoked app keys. All test app keys were revoked at cleanup; two labelled test casts remained readable.</p>
+        <p>On 21 October we repeated authorization, a new cast and reply, reactions, follows, app filters and revocation through HTTPS, with the client and node on the same EC2. Test keys were revoked again. The repository contains <code>docs/public/HOSTED-CLIENT-VERIFICATION.md</code> with the new message hashes.</p>
         <blockquote><p>Relay live verification — disposable test account. Posted through our own Snapchain read node; no third-party social API. 20 October 2026.</p><cite>Our test cast · FID 3356280</cite></blockquote>
-        <details><summary>Check the message hashes</summary><p>Cast <code class="hash">0x4f8122235ed0a713b94f407cfdde8b55b35f0998</code></p><p>Reply <code class="hash">0xe1555d459cdba1b5d356d8bd29e1bcb1213545f3</code></p><p>Read them by loading FID 3356280 in your local client. The repository contains the full record in <code>docs/LIVE-CLIENT-VERIFICATION.md</code>.</p></details>
+        <details><summary>Check the message hashes</summary><p>Cast <code class="hash">0x4f8122235ed0a713b94f407cfdde8b55b35f0998</code></p><p>Reply <code class="hash">0xe1555d459cdba1b5d356d8bd29e1bcb1213545f3</code></p><p>Read them by loading FID 3356280 in your hosted client. The repository contains the full record in <code>docs/LIVE-CLIENT-VERIFICATION.md</code>.</p></details>
         <p class="note">Still unverified: the full new-server installation, an independent person’s reproduction, a manual wallet-extension run and the positive recovery-phrase path on mainnet. Our clean-source test connected to the existing node. Live wallet signatures used an automated signing bridge. These results are not a claim that the bounty is complete.</p>
       </div>
     </section>
@@ -190,8 +191,8 @@ aws sts get-caller-identity</code></pre>
         <details><summary>SSH will not connect</summary><p>Check the instance is running, the local key exists and port 22 allows your current public IPv4 /32. If your address changed, update that rule in AWS. Do not open SSH to the entire internet. A local sandbox restriction needs local network permission; it does not prove the server is down.</p></details>
         <details><summary>Provisioning was interrupted</summary><p>Rerun the same command from the same repository folder. <code>.relay-state</code> records the resources and launch token. Keep it: deleting it can leave paid resources behind. Inspect AWS before starting a separate deployment.</p></details>
         <details><summary>The API resets or sync looks stuck</summary><p>Check <code>./relay logs</code>, free disk and restore activity. Downloading and unpacking are different stages. Avoid restarting a progressing restore. The read-node <code>mempoolSize</code> value <code>4294967295</code> means “not reported,” not billions of pending posts.</p></details>
-        <details><summary>A local port is already in use</summary><p>Stop the client or tunnel you previously started, or use different ports:</p><pre><code>RELAY_TUNNEL_PORT=13382 PORT=5175 ./relay client</code></pre><p>Then open <code>http://127.0.0.1:5175/</code>. Relay refuses to replace an unrelated process.</p></details>
-        <details><summary>The hosted client cannot load data</summary><p>A static copy of the React interface has no local proxy or SSH tunnel. Run <code>./relay client</code> on your computer. For this guide’s Vercel project, keep Root Directory at <code>.</code>; the root configuration publishes <code>site/</code>.</p></details>
+        <details><summary>A local development port is already in use</summary><p>Stop the client or tunnel you previously started, or use different ports:</p><pre><code>RELAY_TUNNEL_PORT=13382 PORT=5175 ./relay client --local</code></pre><p>Then open <code>http://127.0.0.1:5175/</code>. Relay refuses to replace an unrelated process.</p></details>
+        <details><summary>HTTPS or the hosted client is unavailable</summary><p>Check DNS points to the server and inbound TCP 80 and 443 are allowed. On an existing host, you manage those firewall rules. The installer reports success only after a valid HTTPS health check. If a certificate is still pending, keep saved state, check Caddy logs and rerun <code>./relay client</code>.</p><p>On the server, inspect <code>sudo docker compose -p relay-client -f /opt/relay-client/compose.yml logs --tail 40</code>. Do not restart Snapchain to fix client hosting. The optional custom domain needs an A record pointing to the server.</p></details>
         <details><summary>Signer authorization fails or a post stays pending</summary><p>Check the FID’s custody wallet, active storage and current signer state. An expired or revoked key cannot post. Acceptance by a read node does not guarantee inclusion: it forwards the message through gossip and keeps no pending-message queue. Relay checks confirmation and resends identical signed bytes at most twice. Inspect the result before creating a duplicate action.</p></details>
       </div>
     </section>
@@ -199,11 +200,11 @@ aws sts get-caller-identity</code></pre>
     <section id="cleanup" class="guide-section">
       <div class="section-intro"><h2>Stop and clean up</h2><p>Closing your browser leaves the AWS server running.</p></div>
       <div class="section-body">
-        <p>Revoke test app keys. Press Ctrl-C in the client terminal, then close its managed SSH tunnel:</p><div class="copy-block"><pre><code id="disconnect-command">./relay disconnect</code></pre><button class="copy-button" data-copy="disconnect-command" aria-label="Copy disconnect command">Copy</button></div>
+        <p>Revoke test app keys. Closing the browser or setup terminal leaves the hosted client and node running. To stop just the hosted client, SSH to your server and run:</p><div class="copy-block"><pre><code id="hosted-stop-command">sudo docker compose -p relay-client -f /opt/relay-client/compose.yml stop</code></pre><button class="copy-button" data-copy="hosted-stop-command" data-run-on="server" aria-label="Copy hosted client stop command">Copy</button></div>
         <p>For a server created by Relay, preview either action first:</p>
         <table><thead><tr><th>Command</th><th>Consequence after confirmation</th></tr></thead><tbody><tr><td><code>./relay stop</code></td><td>Stops compute. The disk remains and still costs money.</td></tr><tr><td><code>./relay destroy</code></td><td>Permanently deletes the managed instance and configured root disk, then removes its recorded security group and AWS key pair.</td></tr></tbody></table>
         <p>The preview makes no change. To act, repeat it with <code>--confirm INSTANCE_ID</code> using the exact ID printed. Save evidence before deletion. Check AWS afterward for retained disks, snapshots or partial cleanup failures.</p>
-        <p class="note">There is no automatic shutdown or deletion. Servers connected through Existing node are never stopped or destroyed by Relay.</p>
+        <p class="note">There is no automatic shutdown or deletion. EC2 and disk charges continue after stopping only the client. For optional local mode, Ctrl-C stops the local client and <code>./relay disconnect</code> closes its tunnel. Servers connected through Existing node are never stopped or destroyed by Relay.</p>
       </div>
     </section>
 
@@ -219,7 +220,7 @@ aws sts get-caller-identity</code></pre>
     <footer>
       <a class="brand" href="#start"><span class="brand-mark" aria-hidden="true"><i></i><i></i></span>Relay</a><p>Your node. Your feed.</p>
       <div><a href="https://snapchain.farcaster.xyz/" target="_blank" rel="noreferrer">Snapchain docs</a><a href="https://github.com/vrajdesai78/farcaster-bounty" target="_blank" rel="noreferrer">Repository · access required</a></div>
-      <small>Guide updated 21 October 2026. Client evidence is from 20 October, not a live status report. Project code is MIT; upstream files and fonts retain their own licenses. No endorsement, submission or prize is claimed.</small>
+      <small>Guide updated 21 October 2026. Local-client evidence is from 20 October; hosted-client evidence is from 21 October. These are recorded checks, not a live status report. Project code is MIT; upstream files and fonts retain their own licenses. Independent reproduction and bounty submission are still pending.</small>
     </footer>
   </main>
 </div>

@@ -1,0 +1,39 @@
+services:
+  relay:
+    image: relay-client:local
+    build:
+      context: ./source
+      dockerfile: config/client/Dockerfile
+    network_mode: host
+    environment:
+      PUBLIC_ORIGIN: https://${RELAY_DOMAIN:?Set RELAY_DOMAIN}
+      RELAY_LOGIN_HASH: ${RELAY_LOGIN_HASH:?Set generated login hash}
+      SNAPCHAIN_URL: http://127.0.0.1:3381
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: [/tmp]
+    mem_limit: 256m
+    cpus: 0.5
+    logging:
+      options: {max-size: 5m, max-file: '2'}
+  caddy:
+    image: caddy@sha256:d8542f48d34a9cf4e4c11a478865229840e87e4c96ea3f439101f31a5d35f75f
+    network_mode: host
+    environment:
+      RELAY_DOMAIN: ${RELAY_DOMAIN:?Set RELAY_DOMAIN}
+    labels:
+      io.relay.config-sha256: ${RELAY_CONFIG_SHA:?Set generated config digest}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+    mem_limit: 128m
+    cpus: 0.5
+    logging:
+      options: {max-size: 5m, max-file: '2'}
+volumes:
+  caddy_data:
+  caddy_config:

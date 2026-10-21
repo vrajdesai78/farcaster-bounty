@@ -18,7 +18,7 @@ function updateCommands() {
   $('#first-step-title').textContent = mode === 'aws' ? 'Create the server' : 'Connect your existing node';
   $('#provision-description').textContent = mode === 'aws'
     ? 'Creates paid AWS resources in us-east-1 by default. Saves server details and the private SSH key in .relay-state/.'
-    : 'Records your existing host and key path. Creates no AWS resources and leaves the node unchanged.';
+    : 'Records your existing host and key path. The next command checks the node; the client installs separately beside it.';
   $('#node-description').textContent = mode === 'aws'
     ? 'Installs Docker and starts the pinned node. Snapshot restore begins on the server.'
     : 'Reads the existing node’s status. Does not install software, replace configuration or restart it.';
@@ -98,7 +98,7 @@ for (const button of document.querySelectorAll('[data-copy]')) button.addEventLi
   }
   try {
     await copyText(document.getElementById(id).textContent);
-    announce('Command copied. Run it in your local repository folder.');
+    announce(button.dataset.runOn === 'server' ? 'Command copied. Run it on your server over SSH.' : 'Command copied. Run it in your local repository folder.');
     $('#command-status').classList.remove('error');
   } catch (error) { announce(error.message); }
 });

@@ -16,6 +16,9 @@ import sys
 import time
 import uuid
 import urllib.request
+import hashlib
+import secrets
+import tarfile
 
 ROOT = Path(__file__).resolve().parent
 STATE_DIR = Path(os.environ.get('RELAY_STATE_DIR', ROOT / '.relay-state')).expanduser().resolve()
@@ -255,7 +258,7 @@ def tunnel(state):
         '-L', '127.0.0.1:' + str(TUNNEL_PORT) + ':127.0.0.1:3381', command[-1]])
 
 
-def client(args):
+def local_client(args):
     state = load()
     require('node', 'npm', 'ssh')
     version = tuple(int(n) for n in run(['node', '-p', 'process.versions.node']).split('.')[:2])
@@ -274,10 +277,153 @@ def client(args):
     run(['npm', 'run', 'dev'], capture=False, cwd=ROOT / 'client', env=environment)
 
 
+def client_domain(state, value=None):
+    hostname = state['host'].split('@', 1)[1]
+    if value:
+        domain = value.lower()
+    elif state.get('client_custom_domain'):
+        domain = state['client_domain']
+    else:
+        try:
+            address = ipaddress.IPv4Address(hostname)
+        except ValueError:
+            address = ipaddress.IPv4Address(socket.gethostbyname(hostname))
+        if not address.is_global:
+            raise RuntimeError('Hosted HTTPS requires a public server address or --domain.')
+        domain = 'relay-' + str(address).replace('.', '-') + '.sslip.io'
+    if len(domain) > 253 or not re.fullmatch(r'(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}', domain):
+        raise RuntimeError('Use a public hostname without a scheme, path, wildcard or port.')
+    return domain
+
+
+def client_source_archive(output):
+    paths = [ROOT / 'client' / name for name in ['package.json', 'package-lock.json', 'index.html', 'tsconfig.json', 'vite.config.ts', 'server/production.mjs']]
+    for directory in ['client/src', 'client/public', 'config/client']:
+        paths.extend(p for p in (ROOT / directory).rglob('*') if p.is_file())
+    with tarfile.open(output, 'w:gz') as archive:
+        for path in paths:
+            if path.is_symlink():
+                raise RuntimeError('Refusing a symlink in hosted client source.')
+            archive.add(path, arcname=path.relative_to(ROOT).as_posix(), recursive=False)
+    os.chmod(output, 0o600)
+
+
+def verify_client_dns(state, domain):
+    server = socket.gethostbyname(state['host'].split('@', 1)[1])
+    try:
+        addresses = {result[4][0] for result in socket.getaddrinfo(domain, None, socket.AF_INET, socket.SOCK_STREAM)}
+    except OSError:
+        raise RuntimeError('Client hostname does not resolve yet. Point its A record to the server and retry.') from None
+    if addresses != {server}:
+        raise RuntimeError('Client DNS must point directly to this server before deployment. Check its A record; disable any DNS proxy for this setup.')
+
+
+def hosted_web_rules(state):
+    if state['mode'] != 'managed':
+        return  # Existing-host operators keep control of their firewall.
+    current = aws(state, 'ec2', 'describe-instances', '--instance-ids', state['instance_id'])['Reservations'][0]['Instances'][0]
+    if not any(t['Key'] == 'RelayOwner' and t['Value'] == state['token'] for t in current.get('Tags', [])):
+        raise RuntimeError('Ownership tag does not match. Refusing firewall changes.')
+    for port in [80, 443]:
+        rules = aws(state, 'ec2', 'describe-security-groups', '--group-ids', state['security_group'])['SecurityGroups'][0]['IpPermissions']
+        if any(r.get('IpProtocol') == 'tcp' and r.get('FromPort') == port and r.get('ToPort') == port
+               and any(ip.get('CidrIp') == '0.0.0.0/0' for ip in r.get('IpRanges', [])) for r in rules):
+            continue
+        aws(state, 'ec2', 'authorize-security-group-ingress', '--group-id', state['security_group'],
+            '--ip-permissions', json.dumps([{'IpProtocol': 'tcp', 'FromPort': port, 'ToPort': port,
+                                           'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]))
+
+
+def client(args):
+    if args.local:
+        if args.domain or args.credentials:
+            raise RuntimeError('--local cannot be combined with hosted domain/login options.')
+        return local_client(args)
+    state = load()
+    access_file = STATE_DIR / 'hosted-access.json'
+    if args.credentials:
+        if not access_file.exists():
+            raise RuntimeError('Deploy the hosted client first.')
+        print(access_file.read_text())  # Explicit local-only display requested by the operator.
+        return
+    require('ssh')
+    if state['mode'] == 'managed':
+        instance = aws(state, 'ec2', 'describe-instances', '--instance-ids', state['instance_id'])['Reservations'][0]['Instances'][0]
+        if not any(t['Key'] == 'RelayOwner' and t['Value'] == state['token'] for t in instance.get('Tags', [])):
+            raise RuntimeError('Ownership tag does not match. Refusing hosted deployment.')
+        if instance.get('State', {}).get('Name') != 'running' or not instance.get('PublicIpAddress'):
+            raise RuntimeError('The managed instance must already be running with a public IPv4.')
+        state['host'] = 'ubuntu@' + instance['PublicIpAddress']
+    domain = client_domain(state, args.domain)
+    verify_client_dns(state, domain)
+    if access_file.exists():
+        access = json.loads(access_file.read_text())
+    else:
+        access = {'username': 'relay', 'password': secrets.token_urlsafe(32)}
+    access['url'] = 'https://' + domain
+    with os.fdopen(os.open(access_file, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), 'w') as stream:
+        stream.write(json.dumps(access, indent=2) + '\n')
+    os.chmod(access_file, 0o600)
+    state.setdefault('client_owner', str(uuid.uuid4()))
+    state.update(client_domain=domain, client_url=access['url'], client_custom_domain=bool(args.domain) or state.get('client_custom_domain', False))
+    save(state)
+    # This directory/service is separate from the node's deployment and data.
+    directory = '/opt/relay-client'
+    owner = shlex.quote(state['client_owner'])
+    remote(state, 'command -v docker >/dev/null && sudo docker compose version >/dev/null || '
+           '{ echo "Docker Compose is required; finish ./relay node first." >&2; exit 1; }; '
+           'if sudo test -d ' + directory + '; then '
+           'sudo test -f ' + directory + '/.relay-owner && '
+           'test "$(sudo cat ' + directory + '/.relay-owner)" = ' + owner + ' || '
+           '{ echo "Existing /opt/relay-client is not owned by this saved state." >&2; exit 1; }; '
+           'else sudo mkdir -p ' + directory + ' && '
+           'printf %s ' + owner + ' | sudo tee ' + directory + '/.relay-owner >/dev/null; fi; '
+           'sudo chmod 700 ' + directory + ' && sudo mkdir -p ' + directory + '/source')
+    archive_path = STATE_DIR / 'hosted-source.tgz'
+    try:
+        client_source_archive(archive_path)
+        import base64
+        run(ssh_args(state) + ['base64 -d | sudo tar -xz -C ' + directory + '/source'],
+            input=base64.b64encode(archive_path.read_bytes()).decode('ascii'))
+    finally:
+        archive_path.unlink(missing_ok=True)
+    login_hash = hashlib.sha256((access['username'] + ':' + access['password']).encode()).hexdigest()
+    config_hash = hashlib.sha256((ROOT / 'config/client/Caddyfile').read_bytes()).hexdigest()
+    environment = 'RELAY_DOMAIN=' + domain + '\nRELAY_LOGIN_HASH=' + login_hash + '\nRELAY_CONFIG_SHA=' + config_hash + '\n'
+    run(ssh_args(state) + ['sudo install -m 600 /dev/stdin ' + directory + '/.env'], input=environment)
+    remote(state, 'sudo cp ' + directory + '/source/config/client/compose.yml ' + directory + '/compose.yml && '
+           'sudo cp ' + directory + '/source/config/client/Caddyfile ' + directory + '/Caddyfile')
+    hosted_web_rules(state)
+    print('Building the hosted client. Snapchain is left running.', flush=True)
+    print(remote(state, 'sudo sh -c ' + shlex.quote('cd ' + directory +
+                 ' && docker compose -p relay-client config --quiet && docker compose -p relay-client up -d --build')))
+    import base64
+    authorization = 'Basic ' + base64.b64encode((access['username'] + ':' + access['password']).encode()).decode()
+    print('Checking HTTPS. Existing hosts must allow inbound TCP 80 and 443.', flush=True)
+    for attempt in range(12):
+        try:
+            request = urllib.request.Request(access['url'] + '/healthz', headers={'Authorization': authorization})
+            with urllib.request.urlopen(request, timeout=10) as response:
+                if json.load(response).get('status') != 'ok':
+                    raise RuntimeError('Unexpected hosted health response.')
+            state['client_verified'] = True
+            save(state)
+            print('Hosted client ready: ' + access['url'] + '\nLogin saved privately: ' + str(access_file) +
+                  '\nDisplay it locally with ./relay client --credentials. Your terminal can now close.')
+            if sys.stdout.isatty():
+                print('Username: ' + access['username'] + '\nPassword: ' + access['password'])
+            return
+        except (OSError, ValueError):
+            if attempt == 11:
+                raise RuntimeError('Client installed, but HTTPS is not verified. Check DNS, ports 80/443 and Caddy logs; keep saved state and rerun ./relay client. No node restart is needed.')
+            time.sleep(5)
+
+
 def status(args):
     state = load()
-    tunnel(state)
-    first = fetch_local('/v1/info')
+    def fetch_node(path):
+        return json.loads(remote(state, 'curl -fsS --max-time 18 ' + shlex.quote('http://127.0.0.1:3381' + path)))
+    first = fetch_node('/v1/info')
     print(json.dumps({'version': first.get('version'), 'shards': first.get('shardInfos', [])}, indent=2))
     if not args.verify:
         return
@@ -288,11 +434,11 @@ def status(args):
         raise RuntimeError('Node is not near the chain head yet. Restore/catch-up may still be progressing.')
     print('Taking a second sample in 15 seconds...', flush=True)
     time.sleep(15)
-    second = fetch_local('/v1/info')
+    second = fetch_node('/v1/info')
     heights = {s['shardId']: s['maxHeight'] for s in first['shardInfos']}
     if not near(second) or {s['shardId'] for s in second['shardInfos']} != set(heights) or not all(s['maxHeight'] > heights[s['shardId']] for s in second['shardInfos']):
         raise RuntimeError('Sync not verified: shard delays/heights did not satisfy both samples.')
-    casts = fetch_local('/v1/castsByFid?fid=2&pageSize=1')
+    casts = fetch_node('/v1/castsByFid?fid=2&pageSize=1')
     if not casts.get('messages'):
         raise RuntimeError('Near head, but the real read returned no casts; inspect before claiming readiness.')
     evidence = {'verified_at': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
@@ -356,7 +502,10 @@ def main():
     p.add_argument('--subnet-id'); p.add_argument('--ami'); p.add_argument('--existing-host'); p.add_argument('--key'); p.add_argument('--remote-dir')
     p.set_defaults(func=provision)
     commands.add_parser('node', help='Install a new managed node or check an adopted node').set_defaults(func=node)
-    commands.add_parser('client', help='Open managed tunnel, install locked dependencies and run Relay').set_defaults(func=client)
+    p = commands.add_parser('client', help='Deploy the HTTPS client beside your node; --local keeps the development tunnel')
+    p.add_argument('--local', action='store_true'); p.add_argument('--domain', help='Optional hostname with an A record pointing to this server')
+    p.add_argument('--credentials', action='store_true', help='Explicitly display the saved hosted login on your own terminal')
+    p.set_defaults(func=client)
     p = commands.add_parser('status', help='Inspect sync; --verify requires two samples and a real read')
     p.add_argument('--verify', action='store_true'); p.set_defaults(func=status)
     commands.add_parser('logs', help='Read the last 40 node log lines').set_defaults(func=logs)
@@ -368,7 +517,7 @@ def main():
     STATE_DIR.mkdir(mode=0o700, parents=True, exist_ok=True)
     # Do not hold an orchestration lock for the lifetime of the local dev server.
     with contextlib.ExitStack() as stack:
-        if args.command != 'client':
+        if args.command != 'client' or not args.local:
             lock = stack.enter_context(open(STATE_DIR / 'lock', 'a'))
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         args.func(args)

@@ -4,7 +4,7 @@ This public guide corresponds to the interactive tutorial in `site/`. It separat
 
 ## Prerequisites and costs
 
-On your local macOS/Linux computer (or WSL2), install Python 3.9+, OpenSSH, Node.js 22.12+ or a newer supported LTS, and Git or an archive extractor. For AWS, install/configure AWS CLI v2 with your own account credentials. Those cloud credentials are not third-party social API keys and are never copied to the server.
+On your local macOS/Linux computer (or WSL2), install Python 3.9+, OpenSSH, Git or an archive extractor. Node.js is only needed locally for the optional development mode; the hosted client builds inside its pinned container on EC2. For AWS, install/configure AWS CLI v2 with your own account credentials. Those cloud credentials are not third-party social API keys and are never copied to the server.
 
 Use a dedicated Linux host with 4 vCPU, 16 GB RAM, a public IP and 2 TB SSD. The managed path uses Ubuntu 22.04, `m5.xlarge`, 2,000 GiB encrypted gp3, 3,000 IOPS and 125 MiB/s. Compute, provisioned storage, public IPv4, applicable transfer and taxes cost money. Check the [AWS calculator](https://calculator.aws/) for your region. No automatic shutdown or deletion is installed. Stopping compute retains storage charges.
 
@@ -30,9 +30,11 @@ Before paying, inspect the plan without making AWS calls:
 
 Created resources: one instance/root disk, SSH key pair and security group. HTTP/metrics bind to server loopback. Public peer ingress is UDP 3382 and TCP 3383; SSH is your /32. IMDSv2 is required. Detailed monitoring is not enabled. The private SSH key stays on your computer.
 
+The hosted client step also opens public TCP 80 and 443 on a managed instance, after checking its ownership tag. Existing-host operators must allow those two ports themselves. The node HTTP API stays private.
+
 State is written after each stage to `.relay-state/state.json` with mode 600; its directory is mode 700. A stable client token protects the instance launch from duplicates if a network failure interrupts the response. Keep the same state and rerun the same command to resume. Do not delete state as a retry strategy. On a partial failure, inspect recorded resources and the AWS console; you may still be paying for resources that were accepted before an interruption.
 
-**Existing node alternative:** this does not create resources or install anything:
+**Existing node alternative:** adopting the host creates no resources or software. The node step checks it; the client step installs the separate hosted client:
 
 ```sh
 ./relay provision --existing-host ubuntu@YOUR_SERVER --key ~/.ssh/id_ed25519
@@ -60,17 +62,49 @@ New installs use `/opt/relay-snapchain`. Snapshot download, decompression, tar e
 
 Never infer a stall just because tar extraction is quiet. Check actual progress/free disk before restarting. No full-sync ETA is guaranteed.
 
-## 3. Launch the client
+## 3. Deploy the hosted client
 
 ```sh
 ./relay client
 ```
 
-The helper opens a local loopback SSH tunnel on port 13381, installs locked npm dependencies if needed, and runs the client/proxy on **http://127.0.0.1:5173/**. On first connection, OpenSSH records the server's host key using accept-new; a later changed host key is rejected. Verify the fingerprint through a trusted channel when first connecting.
+This builds the browser client and installs a small production service beside Snapchain in `/opt/relay-client`. Caddy provides HTTPS and renews certificates. The installer starts only these client services; it leaves Snapchain and its database running. The browser signs social messages and sends them through HTTPS. The client service reaches the node at `127.0.0.1:3381` on the same server.
 
-The helper refuses an unmanaged process occupying its tunnel port. Stop your previous tunnel yourself, or choose another port through `RELAY_TUNNEL_PORT`; use `PORT` to change the local client port. Example: `RELAY_TUNNEL_PORT=13382 PORT=5175 ./relay client`. It does not kill unrelated processes. Keep this terminal running; Ctrl-C stops only the local client. Close the managed tunnel separately with `./relay disconnect`.
+The command prints an HTTPS URL after checking it with normal certificate verification. Open that URL in a browser on your computer or phone. No local proxy, Node.js process or SSH tunnel needs to stay running.
 
-Production build check: `cd client && npm ci && npm test && npm run build`. `vite preview` alone does not provide the local proxy; use the normal local server for actual node access. Only the guide is a public static site. Do not expose the development server or secrets on a public website.
+A purchased domain is optional. By default the helper uses `relay-SERVER-IP.sslip.io`; sslip.io resolves the embedded public IP without DNS-account setup. It is a public DNS dependency, and certificate-authority availability/rate limits apply. The URL contains your public server IP. If that IP changes, the hostname and deployment configuration need updating. For a custom domain, point its A record directly to the server first (DNS proxy disabled), then run:
+
+```sh
+./relay client --domain client.example.com
+```
+
+The client is protected by a generated HTTP Basic login over HTTPS. It is separate from your wallet and never grants Farcaster signing permission. Login credentials are stored locally in mode-600 `.relay-state/hosted-access.json`; the server receives only a hash. The installer displays them automatically in an interactive terminal. When output is captured or redirected, it prints only the private file path. To retrieve them later on your own terminal:
+
+```sh
+./relay client --credentials
+```
+
+Keep the login and this file private. The browser may retain its HTTP Basic session; close the private browser session after use on a shared device. The app signer still stays in browser memory and is forgotten on reload.
+
+Managed AWS instances get inbound TCP 80/443 automatically. On existing hosts, allow those ports in the provider firewall yourself. Ports 80/443 must be free. Existing directories/services are not replaced unless the saved deployment owns `/opt/relay-client`. Caddy certificates persist in Docker volumes across client restarts. Container logs are bounded; reads, signed submissions, request bodies and upstream connections have explicit limits.
+
+If HTTPS setup has not finished, the installer reports that it is unverified. Keep the saved state, check DNS/firewall and the client logs, then rerun the same command. Never bypass certificate errors or restart Snapchain to fix client hosting. On the server, inspect:
+
+```sh
+sudo docker compose -p relay-client -f /opt/relay-client/compose.yml logs --tail 40
+```
+
+### Optional local development
+
+Install Node.js 22.12+ or a newer supported LTS on your computer, then run:
+
+```sh
+./relay client --local
+```
+
+This keeps the original loopback client/proxy at `http://127.0.0.1:5173/` and an SSH tunnel on port 13381. Keep the terminal running. Choose different ports with `RELAY_TUNNEL_PORT=13382 PORT=5175 ./relay client --local` when needed. Relay refuses to replace an unrelated tunnel process. First SSH connections record the host key using accept-new; changed keys are rejected. Verify the initial fingerprint through a trusted channel.
+
+`vite preview` alone does not provide a node connection. Vercel hosts the static guide, while the production client and node run on EC2. Do not expose the Vite development server publicly.
 
 ## Verify synchronization
 
@@ -113,7 +147,13 @@ The helper refuses a registration value above 0.0001 ETH, simulates first and ve
 
 ## Cleanup
 
-Revoke app keys; Ctrl-C the local client; close its tunnel:
+Revoke app keys first. Closing the setup terminal or browser leaves both hosted services and the node running. To stop only the client services, run on your server:
+
+```sh
+sudo docker compose -p relay-client -f /opt/relay-client/compose.yml stop
+```
+
+This leaves the node and all EC2/disk charges in place. In optional local mode, Ctrl-C stops the local client and this closes its tunnel:
 
 ```sh
 ./relay disconnect
@@ -128,7 +168,7 @@ Managed-server lifecycle commands first print a plan with no change:
 
 Repeating the chosen command with `--confirm INSTANCE_ID` explicitly authorizes it. The ownership tag must match local state. Stop retains disk charges. Destroy permanently terminates the instance and configured delete-on-termination root disk, waits for termination and deletes its recorded security group/key pair. The default VPC/subnet are never deleted. Inspect AWS for retained resources/snapshots and partial cleanup failures. No automatic shutdown, deletion, paid monitoring or host-wide pruning is installed.
 
-Adopted hosts are never stopped/destroyed by Relay. An OS shutdown previously configured outside Relay is outside this helper; inspect/manage it yourself. Private deployment instructions and histories are not part of the public source package.
+Adopted hosts are never stopped/destroyed by Relay. The hosted client command installs separate client services on an adopted host; the node check remains read-only. An OS shutdown previously configured outside Relay is outside this helper; inspect/manage it yourself. Private deployment instructions and histories are not part of the public source package.
 
 ## Evidence and remaining gates
 

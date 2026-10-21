@@ -14,7 +14,7 @@ const server = http.createServer(async (req, res) => {
     if (![`127.0.0.1:${port}`, `localhost:${port}`].includes(req.headers.host)) return json(res, 403, { error: 'Local access only' });
     if (req.headers.origin && ![`http://127.0.0.1:${port}`, `http://localhost:${port}`].includes(req.headers.origin)) return json(res, 403, { error: 'Foreign origin rejected' });
     const url = new URL(req.url, `http://127.0.0.1:${port}`);
-    if (url.pathname === '/api/config') return json(res, 200, { nodeUrl: target.origin, transport: ['localhost','127.0.0.1','[::1]'].includes(target.hostname) ? 'Local connection / SSH tunnel' : 'Remote node' });
+    if (url.pathname === '/api/config') return json(res, 200, { nodeUrl: target.origin, mode: 'local', transport: ['localhost','127.0.0.1','[::1]'].includes(target.hostname) ? 'Local connection / SSH tunnel' : 'Remote node' });
     if (url.pathname === '/setup') { res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' }); return res.end(await readFile(new URL('../../SETUP.md', import.meta.url), 'utf8')); }
     if (!url.pathname.startsWith('/api/node/')) return vite.middlewares(req, res);
     const endpoint = url.pathname.slice('/api/node/'.length);

@@ -22,7 +22,7 @@ For an existing, already-running node instead:
 ./relay client
 ```
 
-Adoption checks the existing deployment; it never installs over, restarts, stops or destroys it. Open **http://127.0.0.1:5173/** for the client. Each deployment's state and private keys stay in ignored `.relay-state/`. Rerun interrupted commands with that same state to resume.
+The node step checks the adopted deployment without replacing or restarting it. The client step installs separate services in `/opt/relay-client`; allow TCP 80/443 on existing hosts. Lifecycle commands never stop or destroy an adopted server. The third command installs the HTTPS client beside your node and prints its URL. Use the generated login displayed in your interactive terminal, or retrieve it later with `./relay client --credentials`. No purchased domain or always-running local terminal is required. Each deployment's state and private keys stay in ignored `.relay-state/`. Rerun interrupted commands with that same state to resume.
 
 ## What works
 
@@ -32,7 +32,7 @@ Adoption checks the existing deployment; it never installs over, restarts, stops
 - Confirmation through message-shard events for social messages and signer-state reads for key changes.
 - Session-only signing material, local forgetting, self-revocation, and rejection of inactive keys.
 
-The client, node sync and real mainnet actions were verified on 20 October 2026. See [sanitized evidence](docs/LIVE-CLIENT-VERIFICATION.md) and [remaining verification limits](docs/public/READINESS.md). The new AWS provisioner has mocked acceptance coverage, not a fresh paid clean-machine reproduction. This is not a completed bounty submission.
+The original local client and real mainnet actions were verified on 20 October 2026. The hosted HTTPS client repeated the core flows on 21 October; see [hosted verification](docs/public/HOSTED-CLIENT-VERIFICATION.md). See [sanitized evidence](docs/LIVE-CLIENT-VERIFICATION.md) and [remaining verification limits](docs/public/READINESS.md). The new AWS provisioner has mocked acceptance coverage, not a fresh paid clean-machine reproduction. This is not a completed bounty submission.
 
 ## Guide and development
 
@@ -48,15 +48,15 @@ Open **http://127.0.0.1:4173/**. The guide contains no wallet/key entry form and
 
 Import `vrajdesai78/farcaster-bounty` from GitHub and leave **Root Directory at the repository root (`.`)**. This differs from deploying the `site/` folder directly: the root `vercel.json` selects **Other**, skips installation/building, and publishes only `site/`. Leave dashboard build/output overrides disabled so the file applies. No environment variables are required. Click Deploy.
 
-The public deployment contains only the tutorial and its assets. The React client and its local proxy still run on your computer; Vercel does not run the node, SSH tunnel, wallet session or client proxy. `.vercelignore` excludes private state and generated source archives from uploads.
+The public deployment contains only the tutorial and its assets. The production client service and Snapchain run on your EC2; wallet signing happens in the browser. Vercel does not run those services. `.vercelignore` excludes private state and generated source archives from uploads.
 
-### Why the client needs a local proxy
+### Hosted client and local development
 
-Run `./relay client` on your computer to start the client and local proxy at `http://127.0.0.1:5173/`. Browser requests go through that proxy and an SSH tunnel to your own node. A static deployment of `client/dist` does not start the proxy or tunnel, so hosting the interface alone will not make node reads or signed writes work.
+`./relay client` builds and hosts Relay on the same EC2 as Snapchain. Caddy manages HTTPS using a free IP-based sslip.io hostname, or your optional `--domain`. The generated login protects both the interface and API. Signing material stays in browser memory. See [the hosted-client instructions](SETUP.md#3-deploy-the-hosted-client) for credentials, network ports and certificate checks.
 
-The Vercel project hosts the guide only. Keep its Root Directory at `.` so Vercel reads the root configuration and publishes `site/`; selecting `client/` bypasses that configuration. Never add your SSH private key, custody key or recovery phrase to Vercel environment variables to try to fix a missing local proxy.
+For development, `./relay client --local` retains the original local proxy and SSH tunnel at `http://127.0.0.1:5173/`. This optional mode needs local Node.js and a running terminal. A static upload of `client/dist` to Vercel supplies neither hosted backend nor local connection. Keep the guide project’s Root Directory at `.`.
 
-After deployment, check the homepage, fonts/screenshots, chapter links and command copying at the returned HTTPS URL. “Open local client” requires Relay running locally on port 5173. GitHub Pages remains an optional manual workflow, but the current GitHub plan does not support Pages for this private repository.
+After deployment, check the homepage, fonts/screenshots, chapter links and command copying at the returned HTTPS URL. The guide explains how to open the client URL printed by the installer. GitHub Pages remains an optional manual workflow, but the current GitHub plan does not support Pages for this private repository.
 
 Run checks:
 
@@ -72,6 +72,6 @@ Node 22.12+ or a supported newer LTS; Python 3.9+; macOS/Linux or WSL2. AWS CLI 
 
 ## Cleanup and licenses
 
-Ctrl-C stops the local client, not the node. `./relay disconnect` closes its tunnel. `./relay stop` and `./relay destroy` first print plans; a matching instance ID via `--confirm` is required to act on a managed instance. Stopped EC2 retains disk charges. Destruction permanently deletes its configured root disk. Inspect AWS for retained resources afterward. Adopted servers are never managed by these commands.
+Closing the browser or setup terminal leaves the hosted client and node running. For optional local mode, Ctrl-C stops the local client, not the node. `./relay disconnect` closes its tunnel. `./relay stop` and `./relay destroy` first print plans; a matching instance ID via `--confirm` is required to act on a managed instance. Stopped EC2 retains disk charges. Destruction permanently deletes its configured root disk. Inspect AWS for retained resources afterward. Adopted servers are never managed by these commands.
 
-Project code: [MIT](LICENSE). Bundled upstream Snapchain configuration and fonts retain their own licenses; see [NOTICE.md](NOTICE.md). No public endorsement, hosted deployment, prize or completed submission is claimed.
+Project code: [MIT](LICENSE). Bundled upstream Snapchain configuration and fonts retain their own licenses; see [NOTICE.md](NOTICE.md). No public endorsement, prize or completed submission is claimed.
