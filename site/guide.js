@@ -20,7 +20,7 @@ function updateCommands() {
     ? 'Creates the server in us-east-1 and saves its details in .relay-state/. AWS billing starts here. Wait for “Host ready”.'
     : 'Saves your server and key path. Nothing is installed yet.';
   $('#node-description').textContent = mode === 'aws'
-    ? 'Installs Docker, starts the node and begins the snapshot restore. Once you see “Snapshot restore started”, move on. No need to wait for sync.'
+    ? 'Installs Docker, starts the node and begins the snapshot restore. After “Snapshot restore started”, you can install the client while the node restores in the background.'
     : 'Checks your node’s status. It doesn’t install, reconfigure or restart anything.';
   $('#aws-fields').hidden = mode !== 'aws';
   $('#existing-fields').hidden = mode !== 'existing';
@@ -48,14 +48,6 @@ function wireTabs(selector, select) {
   }
 }
 wireTabs('[data-mode]', tab => { mode = tab.dataset.mode; updateCommands(); });
-for (const selector of ['[data-path]', '[data-concept]']) wireTabs(selector, selected => {
-  for (const tab of document.querySelectorAll(selector)) {
-    const active = tab === selected;
-    tab.setAttribute('aria-selected', String(active));
-    tab.tabIndex = active ? 0 : -1;
-    document.getElementById(tab.getAttribute('aria-controls')).hidden = !active;
-  }
-});
 for (const input of document.querySelectorAll('#setup-fields input')) input.addEventListener('input', updateCommands);
 
 async function copyText(text) {
@@ -102,17 +94,4 @@ for (const button of document.querySelectorAll('[data-copy]')) button.addEventLi
     $('#command-status').classList.remove('error');
   } catch (error) { announce(error.message); }
 });
-const chapterLinks = [...document.querySelectorAll('.chapter-rail nav a')];
-if ('IntersectionObserver' in window) {
-  const observer = new IntersectionObserver(entries => {
-    for (const entry of entries) if (entry.isIntersecting) {
-      for (const link of chapterLinks) {
-        if (link.hash === '#' + entry.target.id) link.setAttribute('aria-current', 'location');
-        else link.removeAttribute('aria-current');
-      }
-    }
-  }, {rootMargin: '-90px 0px -62% 0px', threshold: 0});
-  for (const section of document.querySelectorAll('main section[id]')) observer.observe(section);
-}
-for (const link of document.querySelectorAll('.mobile-chapters a')) link.addEventListener('click', () => { $('.mobile-chapters').open = false; });
 updateCommands();

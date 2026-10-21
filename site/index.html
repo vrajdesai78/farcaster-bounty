@@ -4,135 +4,39 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#6d4aff">
-  <meta name="description" content="Run your own Farcaster node and client on one AWS server. Three commands, a short explainer of how the pieces fit, and how to read, post and clean up.">
+  <meta name="description" content="Run your own Farcaster node and client on one AWS server. A step-by-step guide to setup, sync, reading, posting and cleanup.">
   <title>Run your own Farcaster node and client</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="preload" href="assets/instrument-sans.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="styles.css">
   <script src="guide.js" defer></script>
 </head>
-<body>
-<a class="skip-link" href="#main">Skip to guide</a>
-<header class="topbar">
-  <a class="brand" href="#start" aria-label="Guide home">Farcaster client</a>
-  <nav aria-label="Top navigation"><a href="#how-it-works">How it works</a><a href="#prerequisites">Setup</a><a href="#troubleshooting">Troubleshooting</a></nav>
-  <a class="button primary" href="#prerequisites">Start setup <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 4v12M5 11l5 5 5-5"/></svg></a>
+<body><a class="skip-link" href="#main">Skip to guide</a>
+<header class="topbar"><a class="brand" href="#start">Farcaster client</a><nav aria-label="Top navigation"><a href="#quickstart">Quickstart</a><a href="#troubleshooting">Troubleshooting</a><a href="https://github.com/vrajdesai78/farcaster-bounty">Code</a></nav></header>
+<main id="main"><article><header class="article-header" id="start">
+<h1>Run your own Farcaster node and client</h1>
+<p class="lede">Set up a Snapchain read node on AWS, connect a browser client to it, and check that you can read and publish through your own server.</p>
+<p class="article-meta">Updated 21 October 2026 · Snapchain 0.14.3 · macOS, Linux or Windows with WSL2</p>
+<p>Most of the time, you use Farcaster through someone else’s app and infrastructure. Here, we will run the app and its node ourselves. By the end, you will have an HTTPS address you can open on your phone, a local copy of Farcaster’s messages on your server, and a way to verify where your reads and writes go.</p>
+<p>You can follow the reading steps without a Farcaster account. To publish, you will need an existing account with storage and access to its custody wallet. We will get to those terms when we reach posting.</p>
 </header>
-<div class="layout">
-  <aside class="chapter-rail">
-    <nav aria-label="Guide chapters">
-      <a href="#start" aria-current="location">Overview</a>
-      <a href="#how-it-works">How it works</a>
-      <a href="#concepts">Accounts and keys</a>
-      <a href="#prerequisites">1. Get ready</a>
-      <a href="#commands">2. Run the setup</a>
-      <a href="#sync">3. Wait for sync</a>
-      <a href="#client">4. Read and post</a>
-      <a href="#cleanup">5. Clean up</a>
-      <a href="#troubleshooting">Troubleshooting</a>
-      <a href="#proof">What we tested</a>
-    </nav>
-    <div class="rail-foot">Snapchain 0.14.3<br>Last tested 21 Oct 2026</div>
-  </aside>
-  <main id="main">
-    <details class="mobile-chapters">
-      <summary>On this page</summary>
-      <nav aria-label="Mobile guide chapters">
-        <a href="#how-it-works">How it works</a><a href="#concepts">Accounts and keys</a><a href="#prerequisites">1. Get ready</a><a href="#commands">2. Run the setup</a><a href="#sync">3. Wait for sync</a><a href="#client">4. Read and post</a><a href="#cleanup">5. Clean up</a><a href="#troubleshooting">Troubleshooting</a><a href="#proof">What we tested</a>
-      </nav>
-    </details>
-
-    <section id="start" class="hero">
-      <div class="hero-copy">
-        <h1>Run your own<br> Farcaster node<br> and client.</h1>
-        <p class="lede">Three commands put a Snapchain node and a Farcaster client on one AWS server. Then you read and post from your browser, through your own node.</p>
-        <div class="hero-actions"><a class="button primary" href="#prerequisites">Start setup <span aria-hidden="true">↓</span></a><a class="text-link" href="#how-it-works">See how it works</a></div>
-        <dl class="facts">
-          <div><dt>You need</dt><dd>A computer, an AWS account and access to the repository</dd></div>
-          <div><dt>Time</dt><dd>Minutes to install, a few hours to sync</dd></div>
-          <div><dt>Cost</dt><dd>An AWS server and 2 TB disk, billed until you delete them</dd></div>
-          <div><dt>Posting</dt><dd>Optional. Needs a Farcaster account and its wallet</dd></div>
-        </dl>
-      </div>
-      <figure class="preview">
-        <img src="assets/farcaster-client.png" width="1440" height="1000" alt="The Farcaster client showing its connection to our own Snapchain node">
-        <figcaption>The client connected to our own node, 21 October 2026</figcaption>
-      </figure>
-    </section>
-
-    <section id="how-it-works" class="guide-section full-section">
-      <div class="section-intro"><h2>How it works</h2><p>Farcaster is a social network built from accounts and signed messages. Snapchain is the software that stores those messages and keeps every copy in sync. A client is the app you read and post with. This guide runs a Snapchain node and a client on your own server.</p></div>
-      <div class="places">
-        <div><h3>Your computer</h3><p>You run the three setup commands here. After that you only need a browser, on your laptop or your phone.</p></div>
-        <div><h3>Your AWS server</h3><p>Runs the node and the client. Your browser talks to the client over HTTPS, and the client talks to the node on the same machine.</p></div>
-        <div><h3>The Farcaster network</h3><p>Validators put messages into blocks. Your node downloads those blocks and passes your posts on to the validators.</p></div>
-      </div>
-      <div class="path-explainer">
-        <div class="mode-tabs" role="tablist" aria-label="Follow a request">
-          <button id="read-tab" role="tab" aria-selected="true" aria-controls="read-path" data-path="read">Read a feed</button>
-          <button id="write-tab" role="tab" aria-selected="false" aria-controls="write-path" tabindex="-1" data-path="write">Publish a cast</button>
-          <button id="sync-tab" role="tab" aria-selected="false" aria-controls="sync-path" tabindex="-1" data-path="sync">Sync the node</button>
-        </div>
-        <div id="read-path" role="tabpanel" aria-labelledby="read-tab">
-          <figure class="concept-diagram" data-diagram="read">
-            <picture><source media="(max-width: 1200px)" srcset="assets/diagrams/read-mobile.svg"><img src="assets/diagrams/read-desktop.svg" width="1257" height="190" loading="lazy" alt="1. The browser asks the client for an account's casts over HTTPS. 2. The client reads them from the Snapchain database on the same server. 3 and 4. The casts come back to the browser."></picture>
-            <figcaption><span>The client and the node's database live on the same server.</span><a href="assets/diagrams/read-desktop.svg" target="_blank" rel="noreferrer">Open full size</a></figcaption>
-          </figure>
-          <p class="path-caption">Reading needs no account and no wallet. Load FID <code>3356280</code> in your client and the casts come straight out of your node's database.</p>
-        </div>
-        <div id="write-path" role="tabpanel" aria-labelledby="write-tab" hidden>
-          <figure class="concept-diagram" data-diagram="write">
-            <picture><source media="(max-width: 1200px)" srcset="assets/diagrams/write-mobile.svg"><img src="assets/diagrams/write-desktop.svg" width="1040" height="536" loading="lazy" alt="1. The browser signs the cast with its app key and sends it to the client. 2. The client submits it to the node. 3. The node forwards it to validators. 4. Validators commit it in a block. 5. The node reports the result to the client. 6. The browser shows it as confirmed."></picture>
-            <figcaption><span>Follow the numbers out to the network and back.</span><a href="assets/diagrams/write-desktop.svg" target="_blank" rel="noreferrer">Open full size</a></figcaption>
-          </figure>
-          <p class="path-caption">Your browser signs the cast, so the server only ever handles signed bytes. The node accepting a cast doesn't mean it's posted yet. The client waits until the cast appears in a committed block before it shows “Confirmed”.</p>
-        </div>
-        <div id="sync-path" role="tabpanel" aria-labelledby="sync-tab" hidden>
-          <figure class="concept-diagram" data-diagram="sync">
-            <picture><source media="(max-width: 1200px)" srcset="assets/diagrams/sync-mobile.svg"><img src="assets/diagrams/sync-desktop.svg" width="1246" height="240" loading="lazy" alt="The node downloads a saved snapshot, restores it to disk, applies the blocks made since the snapshot, then keeps applying new blocks."></picture>
-            <figcaption><span>A snapshot gets you most of the way. New blocks do the rest.</span><a href="assets/diagrams/sync-desktop.svg" target="_blank" rel="noreferrer">Open full size</a></figcaption>
-          </figure>
-          <p class="path-caption">A new node starts from a saved copy of the network, then applies every block made since. The chain is split into parallel lanes called shards, and each one has to catch up. <a href="#sync">Step 3</a> shows how to check.</p>
-        </div>
-      </div>
-      <p class="note">Yours is a read node. It follows blocks and forwards posts, but it doesn't vote on blocks, so it isn't a validator and earns no rewards. <a href="https://snapchain.farcaster.xyz/node-types" target="_blank" rel="noreferrer">More on node types</a>.</p>
-    </section>
-
-    <section id="concepts" class="guide-section full-section">
-      <div class="section-intro"><h2>Accounts and keys</h2><p>You only need this to post. Reading works without any of it.</p></div>
-      <dl class="glossary concept-terms">
-        <div><dt>FID</dt><dd>Your account number, such as <code>3356280</code>. Your username points to it and can change; the FID can't.</dd></div>
-        <div><dt>Custody wallet</dt><dd>The Ethereum wallet that owns the FID. Here you use it once, to approve an app key.</dd></div>
-        <div><dt>App key</dt><dd>A key your browser creates to sign casts, likes and follows. It can only do what the wallet allowed. Keys from this client expire after 24 hours without use.</dd></div>
-        <div><dt>Storage</dt><dd>Paid onchain per FID. It sets how many casts, likes and follows the network keeps for you, in every client.</dd></div>
-      </dl>
-      <div class="path-explainer">
-        <div class="mode-tabs" role="tablist" aria-label="Account concepts">
-          <button id="keys-tab" role="tab" aria-selected="true" aria-controls="keys-flow" data-concept="keys">Approve an app key</button>
-          <button id="storage-tab" role="tab" aria-selected="false" aria-controls="storage-flow" tabindex="-1" data-concept="storage">Storage vs server disk</button>
-        </div>
-        <div id="keys-flow" role="tabpanel" aria-labelledby="keys-tab">
-          <figure class="concept-diagram" data-diagram="keys">
-            <picture><source media="(max-width: 1200px)" srcset="assets/diagrams/keys-mobile.svg"><img src="assets/diagrams/keys-desktop.svg" width="1156" height="300" loading="lazy" alt="1. The browser creates an app key. 2. The custody wallet approves it. 3. The approval is registered on the network. 4. The app key signs everyday posts. Private keys stay on your device."></picture>
-            <figcaption><span>The wallet signs once. The app key signs everything after that.</span><a href="assets/diagrams/keys-desktop.svg" target="_blank" rel="noreferrer">Open full size</a></figcaption>
-          </figure>
-          <p class="path-caption">Approving a key is free; no gas. Both private keys stay in your browser and wallet, and the server only receives signed messages. Reloading the page forgets the app key. Revoking it removes its permission from the network.</p>
-        </div>
-        <div id="storage-flow" role="tabpanel" aria-labelledby="storage-tab" hidden>
-          <figure class="concept-diagram" data-diagram="storage">
-            <picture><source media="(max-width: 1200px)" srcset="assets/diagrams/storage-mobile.svg"><img src="assets/diagrams/storage-desktop.svg" width="568" height="382" loading="lazy" alt="Two separate payments. Storage rent sets your FID's message limits in every client. The AWS disk holds your node's database. More disk does not raise your limits."></picture>
-            <figcaption><span>Two different bills. A bigger disk never buys you more casts.</span><a href="assets/diagrams/storage-desktop.svg" target="_blank" rel="noreferrer">Open full size</a></figcaption>
-          </figure>
-          <p class="path-caption">Limits vary by account. On 21 October our test FID reported <code>CASTS: used 4, limit 100</code>. Check yours on your node with <code>GET /v1/storageLimitsByFid?fid=YOUR_FID</code> (<a href="https://snapchain.farcaster.xyz/reference/httpapi/storagelimits" target="_blank" rel="noreferrer">API reference</a>).</p>
-        </div>
-      </div>
-      <details class="concept-reference"><summary>How does a gasless app key work?</summary><p>The custody wallet signs the app key's public key, the actions it may take, its expiry window and a nonce, a counter that stops an old approval being reused. The app asking for the key signs too; in this client that's your own FID. The client submits this as a <code>KEY_ADD</code> message and waits for the network to confirm it before using the key.</p><p>Creating an FID and buying storage are onchain and cost ETH on OP Mainnet. Adding an app key costs nothing. <a href="https://snapchain.farcaster.xyz/guides/writing-messages" target="_blank" rel="noreferrer">Snapchain's writing guide</a> has the details.</p></details>
-    </section>
-
-    <section id="prerequisites" class="guide-section">
-      <div class="section-intro"><span class="step-label">Step 1 of 5</span><h2>Get ready</h2><p>Install a few tools, check your AWS login and download the project.</p></div>
-      <div class="section-body">
-        <p>Use macOS, Linux or Windows with WSL2. Every command runs in a terminal on your computer. You don't need to create anything in the AWS console.</p>
+<section id="quickstart"><h2>The setup, in three commands</h2>
+<p>Already have the tools and repository? From the project folder, replace <code>YOUR_IP</code> with your public IPv4 address. Run one command at a time, waiting for each to finish:</p>
+<pre><code>./relay provision --ack-costs --ssh-cidr YOUR_IP/32
+./relay node
+./relay client</code></pre>
+<p>The first command creates paid AWS resources. The second starts the node’s snapshot restore. The third builds the client and prints its HTTPS address and login. Installation finishes before sync does; wait for <a href="#sync">the sync check</a> before expecting recent posts.</p>
+<p><strong>Before spending anything:</strong> this setup uses an <code>m5.xlarge</code> server and a 2,000 GiB disk. AWS charges for compute, provisioned disk, public IPv4 and applicable transfer. Sync can take many hours. Nothing shuts down automatically, and stopping compute leaves disk charges. <a href="#prerequisites">Start with the prerequisites</a> if this is your first time.</p>
+</section>
+<nav class="contents" aria-label="On this page"><h2>In this guide</h2><ol>
+<li><a href="#how-it-works">What we’re running</a></li><li><a href="#prerequisites">Prepare your computer and AWS account</a></li><li><a href="#commands">Create the server and install the software</a></li><li><a href="#sync">Wait for sync and verify a read</a></li><li><a href="#client">Use the client, then publish a test cast</a></li><li><a href="#cleanup">Stop or delete the server</a></li></ol><p><a href="#troubleshooting">Troubleshooting</a> · <a href="#proof">Test records and limits</a></p></nav>
+<section id="how-it-works"><h2>What we’re running</h2>
+<p>Farcaster is the social network: accounts, casts, replies, reactions and follows. These actions are signed messages, so a different client can recognize the same account and read the same public data.</p>
+<p><strong>Snapchain</strong> stores and orders those messages. Validators agree on blocks of messages. Our <strong>read node</strong> follows those blocks and maintains a database we can query. Despite the name, a read node can also forward signed writes to validators. It does not vote on blocks or earn validator rewards. See <a href="https://snapchain.farcaster.xyz/node-types">validators and read nodes</a>.</p>
+<p>The <strong>Farcaster client</strong> is the website we will use to read and post. It runs beside Snapchain on the AWS server. Your browser reaches the client over HTTPS; the client reaches the node on that same machine. You will run setup commands on your computer, but the server keeps working after you close the terminal.</p>
+<figure class="preview"><img src="assets/farcaster-client.png" width="1440" height="1000" alt="The Farcaster client displaying a feed from our Snapchain node" loading="lazy"><figcaption>The client connected to our own node on 21 October 2026.</figcaption></figure>
+</section><section id="prerequisites"><h2>1. Prepare your computer and AWS account</h2>
+<p>Use macOS, Linux or Windows with WSL2. Every command runs in a terminal on your computer. You don't need to create anything in the AWS console.</p>
         <details><summary>New to the terminal?</summary><p>A terminal runs text commands. On macOS, open Terminal from Applications → Utilities. On Windows, <a href="https://learn.microsoft.com/en-us/windows/wsl/install" target="_blank" rel="noreferrer">install WSL2 with Ubuntu</a>, open Ubuntu, and run everything there instead of PowerShell.</p><p>Paste one command, press Enter, and wait for it to finish before the next. <code>./relay</code> is the setup helper that comes with the project.</p></details>
         <ol class="walkthrough">
           <li><strong>Install the tools.</strong> <a href="https://git-scm.com/downloads" target="_blank" rel="noreferrer">Git</a>, <a href="https://www.python.org/downloads/" target="_blank" rel="noreferrer">Python 3.9+</a>, OpenSSH and <a href="https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html" target="_blank" rel="noreferrer">AWS CLI v2</a>. You don't need Node.js; the server builds the client.</li>
@@ -151,15 +55,11 @@ aws sts get-caller-identity</code></pre>
 cd farcaster-bounty</code></pre><button class="copy-button" data-copy="clone-command" aria-label="Copy clone commands">Copy</button></div>
         <p>Run every later command from this folder, and keep it. The helper saves your server details and SSH key in a hidden <code>.relay-state</code> folder here, and needs them to manage or delete the server.</p>
         <details><summary>What AWS creates and charges for</summary><p>One Ubuntu 22.04 <code>m5.xlarge</code> server (4 vCPU, 16 GB RAM) with a 2,000 GiB encrypted gp3 disk (3,000 IOPS, 125 MiB/s), plus an SSH key pair and a security group. It uses your default VPC and creates no NAT gateway, load balancer or paid monitoring.</p><p>You pay for the server, the whole disk, a public IPv4 address and data transfer. A stopped server still pays for its disk, and nothing shuts down automatically. Price it with the <a href="https://calculator.aws/" target="_blank" rel="noreferrer">AWS calculator</a> first.</p></details>
-        <details><summary>AWS permissions and open ports</summary><p>Your AWS user needs to describe EC2 resources, create key pairs and security groups, launch and tag instances, and read <code>ssm:GetParameter</code> to find the Ubuntu image. Cleanup also needs stop, terminate and delete permissions. <code>SETUP.md</code> lists the exact actions.</p><p>SSH only accepts your own IP address. Snapchain's peer ports, UDP 3382 and TCP 3383, are public, and so are 80 and 443 for the client's HTTPS. The node's API stays private to the server. Your AWS credentials never leave your computer.</p></details>
+        <details><summary>AWS permissions and open ports</summary><p>Your AWS user needs to describe EC2 resources, create key pairs and security groups, launch and tag instances, and read <code>ssm:GetParameter</code> to find the Ubuntu image. Cleanup also needs stop, terminate and delete permissions. <code>SETUP.md</code> lists the exact actions.</p><p>SSH only accepts your own IP address. Snapchain's peer ports, UDP 3382 and TCP 3383, are public, and so are 80 and 443 for the client's HTTPS. The HTTP API on port 3381 and metrics listen only on the server's loopback interface. The gRPC API on TCP 3383 is publicly reachable. Your AWS credentials never leave your computer.</p></details>
         <details><summary>Which login is which?</summary><p><strong>GitHub</strong> gets you the code. “Repository not found” usually means your account doesn't have access yet.</p><p><strong>AWS</strong> pays for the server. If your organization manages the account, ask an admin for the permissions above.</p><p><strong>The client login</strong> is created in step 2 and protects your client's web address.</p><p><strong>Your Farcaster wallet</strong> is only needed to post, in step 4. Never paste credentials or recovery phrases into this guide.</p></details>
-      </div>
-    </section>
-
-    <section id="commands" class="guide-section">
-      <div class="section-intro"><span class="step-label">Step 2 of 5</span><h2>Run the setup</h2><p>Three commands, one at a time. Wait for each to finish before the next.</p></div>
-      <div class="section-body">
-        <div class="workbench">
+</section><section id="commands"><h2>2. Create the server and install the software</h2>
+<p>We will create a server, start Snapchain, then install the client beside it. Run these commands on your computer, from the project folder. Wait for each command to finish before running the next.</p>
+<div class="workbench">
           <div class="mode-tabs" role="tablist" aria-label="Server setup method">
             <button id="aws-tab" role="tab" aria-selected="true" aria-controls="setup-fields" data-mode="aws">New AWS server</button>
             <button id="existing-tab" role="tab" aria-selected="false" aria-controls="setup-fields" tabindex="-1" data-mode="existing">I already run a node</button>
@@ -170,88 +70,85 @@ cd farcaster-bounty</code></pre><button class="copy-button" data-copy="clone-com
           </div>
           <ol class="command-steps">
             <li><div><h3 id="first-step-title">Create the server</h3><div class="code-line"><code id="provision-command">./relay provision --ack-costs --ssh-cidr YOUR_IP/32</code><button class="copy-button" aria-label="Copy provision command" data-copy="provision-command">Copy</button></div><p id="provision-description" class="step-help">Creates the server in us-east-1 and saves its details in .relay-state/. AWS billing starts here. Wait for “Host ready”.</p></div></li>
-            <li><div><h3>Start Snapchain</h3><div class="code-line"><code id="node-command">./relay node</code><button class="copy-button" aria-label="Copy node command" data-copy="node-command">Copy</button></div><p id="node-description" class="step-help">Installs Docker, starts the node and begins the snapshot restore. Once you see “Snapshot restore started”, move on. No need to wait for sync.</p></div></li>
+            <li><div><h3>Start Snapchain</h3><div class="code-line"><code id="node-command">./relay node</code><button class="copy-button" aria-label="Copy node command" data-copy="node-command">Copy</button></div><p id="node-description" class="step-help">Installs Docker, starts the node and begins the snapshot restore. After “Snapshot restore started”, you can install the client while the node restores in the background.</p></div></li>
             <li><div><h3>Start the client</h3><div class="code-line"><code id="client-command">./relay client</code><button class="copy-button" aria-label="Copy client command" data-copy="client-command">Copy</button></div><p class="step-help">Builds the client on the server and prints its HTTPS address and a login. Wait for “Hosted client ready”, then save both somewhere private. You can close the terminal now.</p></div></li>
           </ol>
           <p id="command-status" role="status" class="field-help">Run these in the project folder on your computer.</p>
         </div>
-        <details><summary>Preview the plan before paying</summary><p>Fill in your IP above, then run this. It shows what would be created without touching AWS.</p><div class="copy-block"><pre><code id="dry-run-command">./relay provision --ack-costs --ssh-cidr YOUR_IP/32 --dry-run</code></pre><button class="copy-button" data-copy="dry-run-command" aria-label="Copy dry-run command">Copy</button></div><p>Add <code>--region REGION</code> or <code>--profile PROFILE</code> to change region or AWS profile. If your account has no default subnet, pass <code>--subnet-id SUBNET</code>.</p></details>
-      </div>
-    </section>
-
-    <section id="sync" class="guide-section">
-      <div class="section-intro"><span class="step-label">Step 3 of 5</span><h2>Wait for sync</h2><p>The node is running, but it can't serve recent posts until it catches up. This takes a few hours.</p></div>
-      <div class="section-body">
-        <ol class="restore-stages"><li><strong>Download</strong><span>Fetch the snapshot.</span></li><li><strong>Restore</strong><span>Unpack it into the database.</span></li><li><strong>Catch up</strong><span>Apply blocks made since.</span></li></ol>
+        <details><summary>Preview the plan before paying</summary><p>Fill in your IP above, then run this. It shows what would be created without touching AWS.</p><div class="copy-block"><pre><code id="dry-run-command">./relay provision --ack-costs --ssh-cidr YOUR_IP/32 --dry-run</code></pre><button class="copy-button" data-copy="dry-run-command" aria-label="Copy dry-run command">Copy</button></div><p>Add <code>--region REGION</code> or <code>--profile PROFILE</code> to change region or AWS profile. If your account has no default subnet, pass <code>--subnet-id SUBNET</code>.</p></details><p>At this point, the website can be up while the node is still restoring. That is expected. The next step checks whether the database is ready to use.</p>
+</section><section id="sync"><h2>3. Wait for sync and verify a read</h2>
+<p>Leave the server running. Sync can take many hours or run overnight; download speed, disk performance and the snapshot size all affect the wait. A running container alone does not tell you that sync is complete.</p>
+<p>A new node needs a copy of Farcaster’s messages. It downloads a snapshot, unpacks it into its database, then applies the blocks created since that snapshot. Each shard—a separate lane of the chain—must catch up.</p>
+<figure class="concept-diagram" data-diagram="sync">
+            <picture><source media="(max-width: 1200px)" srcset="assets/diagrams/sync-mobile.svg"><img src="assets/diagrams/sync-desktop.svg" width="1246" height="240" loading="lazy" alt="The node downloads a saved snapshot, restores it to disk, applies the blocks made since the snapshot, then keeps applying new blocks."></picture>
+            <figcaption><span>A snapshot gets you most of the way. New blocks do the rest.</span><a href="assets/diagrams/sync-desktop.svg" target="_blank" rel="noreferrer">Open full size</a></figcaption>
+          </figure>
         <p>The logs can go quiet while it unpacks; that's normal. To see what it's doing:</p>
         <div class="copy-block"><pre><code id="logs-command">./relay logs</code></pre><button class="copy-button" data-copy="logs-command" aria-label="Copy logs command">Copy</button></div>
         <p>You can open the client in the meantime, but reads may fail. When you think it's done, check:</p>
         <div class="copy-block"><pre><code id="verify-command">./relay status --verify</code></pre><button class="copy-button" data-copy="verify-command" aria-label="Copy verification command">Copy</button></div>
         <table><caption>It takes two samples, 15 seconds apart, and passes when</caption><thead><tr><th>Check</th><th>Passes when</th></tr></thead><tbody><tr><td>Every shard's <code>blockDelay</code></td><td>Under 10 seconds in both samples</td></tr><tr><td>Every shard's <code>maxHeight</code></td><td>Higher in the second sample</td></tr><tr><td>A real read</td><td>Your node returns a cast</td></tr></tbody></table>
-        <p>When it prints <code>SYNC VERIFIED</code>, go to step 4. If not, check the logs and try again later. Don't restart the node or create a second server; that just starts the wait over. The result is saved in <code>.relay-state/sync-evidence.json</code>.</p>
-      </div>
-    </section>
-
-    <section id="client" class="guide-section">
-      <div class="section-intro"><span class="step-label">Step 4 of 5</span><h2>Read and post</h2><p>Open the HTTPS address from step 2. It works on your phone too.</p></div>
-      <div class="section-body">
-        <ol class="walkthrough">
+        <p>When it prints <code>SYNC VERIFIED</code>, go to step 4. If not, check the logs and try again later. If restore is progressing, leave it alone. Restarting can interrupt the work; creating another server adds another bill. The result is saved in <code>.relay-state/sync-evidence.json</code>.</p>
+</section><section id="client"><h2>4. Use your Farcaster client</h2>
+<p>Open the HTTPS address printed by <code>./relay client</code>, on your computer or phone. You are now running your own Farcaster client: the interface and the node behind it are on your server.</p>
+<h3>Read a real account from your node</h3>
+<ol class="walkthrough">
           <li><strong>Sign in</strong> with the login from step 2. Lost it? <code>./relay client --credentials</code> prints it again. This login only protects your client; it has nothing to do with your Farcaster wallet.</li>
-          <li><strong>Read a feed.</strong> Choose By FID, enter <code>3356280</code> and press Load feed. Our labelled test casts appear, read from your own node. Switch to Following to see recent casts from accounts that FID follows. If you only wanted to read, you're done.</li>
+          <li><strong>Read a feed.</strong> FID is an account’s permanent number. Choose By FID, enter <code>3356280</code> and press Load feed. Our labelled test casts appear, read from your own node. Switch to Following to see recent casts from accounts that FID follows. If you only wanted to read, you're done.</li>
         </ol>
-        <p class="note">The steps below are optional and post publicly on Farcaster. Use an account you're happy to test with: one that already has an FID and storage.</p>
+        <figure class="concept-diagram" data-diagram="read">
+            <picture><source media="(max-width: 1200px)" srcset="assets/diagrams/read-mobile.svg"><img src="assets/diagrams/read-desktop.svg" width="1257" height="190" loading="lazy" alt="1. The browser asks the client for an account's casts over HTTPS. 2. The client reads them from the Snapchain database on the same server. 3 and 4. The casts come back to the browser."></picture>
+            <figcaption><span>The client and the node's database live on the same server.</span><a href="assets/diagrams/read-desktop.svg" target="_blank" rel="noreferrer">Open full size</a></figcaption>
+          </figure><p>For example, when you load FID <code>3356280</code>, the browser asks your client for that account’s casts. The client reads your Snapchain database and returns them. No third-party social API key is involved. The Following view collects recent casts from a bounded set of followed accounts; it is not a complete or ranked feed.</p><section id="concepts"><h3>Before posting: your account and its app key</h3>
+<p>Reading needed no Farcaster account. Posting does: the network must know whose message this is and whether the key signing it has permission.</p>
+<dl class="glossary concept-terms">
+        <div><dt>FID</dt><dd>Your account number, such as <code>3356280</code>. Your username points to it and can change; the FID can't.</dd></div>
+        <div><dt>Custody wallet</dt><dd>The Ethereum wallet that owns the FID. You use it to authorize an app key; it also controls account ownership.</dd></div>
+        <div><dt>App key</dt><dd>A key your browser creates to sign casts, likes and follows. It can only do what the wallet allowed. New keys registered here have a 24-hour sliding expiry, refreshed whenever a message they sign is merged. Imported keys keep their existing permissions and expiry.</dd></div>
+        <div><dt>Storage</dt><dd>Paid onchain per FID. It sets how many casts, likes and follows the network keeps for you, in every client.</dd></div>
+      </dl><figure class="concept-diagram" data-diagram="keys">
+            <picture><source media="(max-width: 1200px)" srcset="assets/diagrams/keys-mobile.svg"><img src="assets/diagrams/keys-desktop.svg" width="1156" height="300" loading="lazy" alt="1. The browser creates an app key. 2. The custody wallet approves it. 3. The approval is registered on the network. 4. The app key signs everyday posts. Private keys stay on your device."></picture>
+            <figcaption><span>The wallet authorizes the app key. That key signs the permitted social actions.</span><a href="assets/diagrams/keys-desktop.svg" target="_blank" rel="noreferrer">Open full size</a></figcaption>
+          </figure><p>Think of the custody wallet as the account owner, and the app key as permission to use certain features. Here, the browser asks the custody wallet for two signatures to register a gasless app key. The app key then signs casts, reactions and follows within its allowed scopes. It cannot change who owns your FID.</p>
+<p>Approving a key is free; no gas. Creating an FID and buying account storage are separate onchain actions on OP Mainnet and cost ETH. Both private keys stay in your browser and wallet; the server receives signed messages.</p>
+<h4>Why account storage and server storage are different</h4>
+<p>Your AWS disk holds a copy of the network’s database. Account storage rent sets how many messages the network keeps for your FID, across all clients. Paying for more AWS disk does not increase your account’s message allowance.</p>
+<figure class="concept-diagram" data-diagram="storage">
+            <picture><source media="(max-width: 1200px)" srcset="assets/diagrams/storage-mobile.svg"><img src="assets/diagrams/storage-desktop.svg" width="568" height="382" loading="lazy" alt="Two separate payments. Storage rent sets your FID's message limits in every client. The AWS disk holds your node's database. More disk does not raise your limits."></picture>
+            <figcaption><span>Two different bills. A bigger disk never buys you more casts.</span><a href="assets/diagrams/storage-desktop.svg" target="_blank" rel="noreferrer">Open full size</a></figcaption>
+          </figure><p>For a real example, on 21 October 2026 our test FID reported <code>CASTS: used 4, limit 100</code>. That is an observation for this account, not a universal quota. Read yours with <code>GET /v1/storageLimitsByFid?fid=YOUR_FID</code> on your node. See the <a href="https://snapchain.farcaster.xyz/reference/httpapi/storagelimits">storage API reference</a>.</p>
+<details><summary>What is inside a gasless key approval?</summary><p>The wallet approves the app key, its allowed message types, its expiry window and a nonce—a counter that prevents replaying an old approval. The requesting app signs too; this client uses your own FID for that role. The browser submits a <code>KEY_ADD</code> message and waits for network confirmation. The <a href="https://snapchain.farcaster.xyz/guides/writing-messages">Snapchain writing guide</a> explains the message format.</p></details>
+</section><h3>Publish a test cast</h3>
+<p class="note">The steps below are optional and post publicly on Farcaster. Use an account you're happy to test with: one that already has an FID and storage.</p>
         <ol class="walkthrough" start="3">
-          <li><strong>Connect your account.</strong> Choose Connect signer → Browser wallet and pick the FID's custody wallet. You'll sign twice to approve an app key. No gas.</li>
+          <li><strong>Connect your account.</strong> Choose Connect signer → Browser wallet and pick the FID's custody wallet. You’ll sign two approvals to register an app key, without paying gas.</li>
           <li><strong>Post a cast.</strong> Try “Testing my own Farcaster node.” The client shows Confirmed once the network has it. Load your FID to see it in your feed.</li>
           <li><strong>Try the rest.</strong> Reply to your cast, like and unlike it, recast and undo, then follow and unfollow someone.</li>
-          <li><strong>Filter by app.</strong> Enter an app's FID and choose Include only or Exclude. In this client, the app FID is your own FID. Casts from unknown apps are left out.</li>
+          <li><strong>Filter by app.</strong> Enter an app's FID and choose Include only or Exclude. In this client, the app FID is your own FID. Casts whose app attribution cannot be resolved are left out. Attribution for revoked keys may no longer be available.</li>
           <li><strong>Revoke the key.</strong> Forget clears the key from this browser. Revoke removes it from the network, so it can't post again.</li>
         </ol>
+<figure class="concept-diagram" data-diagram="write">
+            <picture><source media="(max-width: 1200px)" srcset="assets/diagrams/write-mobile.svg"><img src="assets/diagrams/write-desktop.svg" width="1040" height="536" loading="lazy" alt="1. The browser signs the cast with its app key and sends it to the client. 2. The client submits it to the node. 3. The node forwards it to validators. 4. Validators commit it in a block. 5. The node reports the result to the client. 6. The browser shows it as confirmed."></picture>
+            <figcaption><span>Follow the numbers out to the network and back.</span><a href="assets/diagrams/write-desktop.svg" target="_blank" rel="noreferrer">Open full size</a></figcaption>
+          </figure><p>“Accepted” is only the first hop. Your read node forwards the signed message to validators, which commit it in a block. Your node then applies the block. The client waits for that committed result before showing “Confirmed”. Read nodes forward writes on a best-effort basis; they do not keep a mempool of pending posts.</p>
         <details><summary>Use my own domain, or run the client locally</summary><p>By default you get a free <code>sslip.io</code> address based on the server's IP, with HTTPS from Caddy. Stopping and starting the server can change its public IP, and with it this address.</p><p>For your own domain, point an A record at the server and run <code>./relay client --domain client.example.com</code>. To run the client on your computer instead, install Node.js 22.12+ and run <code>./relay client --local</code>. It uses port 5173 and an SSH tunnel to the node.</p></details>
-        <details><summary>I don't have a test account, or I already have an app key</summary><p>The client needs an existing FID. Repository collaborators can follow “Optional new disposable account” in <code>SETUP.md</code>. A new account needs ETH on OP Mainnet for registration and storage; running a node doesn't cover that.</p><p>Existing signer takes a registered 32-byte Ed25519 app key, which is not your wallet's private key. Prefer Browser wallet. The recovery phrase option is for throwaway test accounts only: anyone with the phrase controls the wallet. Never enter one into this guide.</p></details>
-      </div>
-    </section>
-
-    <section id="cleanup" class="guide-section">
-      <div class="section-intro"><span class="step-label">Step 5 of 5</span><h2>Clean up</h2><p>The server bills until you delete it. Closing the browser stops nothing.</p></div>
-      <div class="section-body">
-        <p>Revoke any test app key first (step 4). Then, from the project folder:</p>
+        <details><summary>I don't have a test account, or I already have an app key</summary><p>The client needs an existing FID. Repository collaborators can follow “Optional new disposable account” in <code>SETUP.md</code>. A new account needs ETH on OP Mainnet for registration and storage; running a node doesn't cover that.</p><p>Existing signer takes a registered 32-byte Ed25519 app key, which is not your wallet's private key. Prefer Browser wallet. The recovery phrase option is for throwaway test accounts only: anyone with the phrase controls the wallet. Only enter a recovery phrase into software from developers you trust. Never enter it into this guide.</p></details>
+</section><section id="cleanup"><h2>5. Stop or delete the server</h2>
+<p>Revoke any test app key first (step 4). Then, from the project folder:</p>
         <table><thead><tr><th>Command</th><th>What it does</th></tr></thead><tbody><tr><td><code>./relay stop</code></td><td>Stops the server. The disk stays, and so does its bill.</td></tr><tr><td><code>./relay destroy</code></td><td>Deletes the server, its disk, security group and key pair. This can't be undone.</td></tr></tbody></table>
         <p>Both commands only preview at first. To go ahead, run the same command again with <code>--confirm INSTANCE_ID</code>, using the ID from the preview. After destroying, check AWS for leftover disks or snapshots.</p>
         <details><summary>Stop only the client</summary><p>The node and the server keep running and billing. Run this on the server over SSH, not on your computer:</p><div class="copy-block"><pre><code id="hosted-stop-command">sudo docker compose -p relay-client -f /opt/relay-client/compose.yml stop</code></pre><button class="copy-button" data-copy="hosted-stop-command" data-run-on="server" aria-label="Copy hosted client stop command">Copy</button></div></details>
         <p class="note">If you used I already run a node, the helper never stops or deletes that server. For local mode, press Ctrl-C to stop the client and run <code>./relay disconnect</code> to close the tunnel.</p>
-      </div>
-    </section>
-
-    <section id="troubleshooting" class="guide-section">
-      <div class="section-intro"><h2>If something fails</h2><p>Read the error before rerunning anything that costs money. Never delete <code>.relay-state</code> to start over.</p></div>
-      <div class="section-body">
-        <details><summary>“No such file” or “command not found”</summary><p>Your terminal isn't in the project folder. <code>cd</code> into your existing <code>farcaster-bounty</code> folder; don't clone a second copy. If <code>git</code>, <code>python3</code> or <code>aws</code> is missing, install it in the same terminal environment (WSL2 on Windows).</p></details>
-        <details><summary>SSH won't connect</summary><p>Check that the server is running and that its security group allows port 22 from your current IP. If your IP has changed, update that rule in AWS. Don't open SSH to everyone.</p></details>
+</section><section id="troubleshooting"><h2>Troubleshooting</h2>
+<details><summary>“No such file” or “command not found”</summary><p>Your terminal isn't in the project folder. <code>cd</code> into your existing <code>farcaster-bounty</code> folder; don't clone a second copy. If <code>git</code>, <code>python3</code> or <code>aws</code> is missing, install it in the same terminal environment (WSL2 on Windows).</p></details>
+        <details><summary>SSH won't connect</summary><p>Check that the server is running and that its security group allows port 22 from your current IP. If your IP has changed, open EC2 → Security Groups, select this server’s group, and edit its inbound SSH rule to your new public IPv4 address followed by <code>/32</code>. Keep port 22 limited to that address. Editing the rule requires <code>ec2:ModifySecurityGroupRules</code> permission.</p></details>
         <details><summary>Setup was interrupted</summary><p>Run the same command again from the same folder. <code>.relay-state</code> remembers what was already created, so it picks up where it stopped instead of creating a second server.</p></details>
         <details><summary>Sync looks stuck, or the API keeps resetting</summary><p>Check <code>./relay logs</code> and free disk space. Downloading and unpacking are separate stages, and unpacking can be quiet for a long time. Don't restart a restore that's still making progress. A <code>mempoolSize</code> of <code>4294967295</code> just means “not reported”.</p></details>
         <details><summary>The client's HTTPS address doesn't load</summary><p>Check that ports 80 and 443 are open and, with a custom domain, that its A record points to the server. If the certificate is still pending, wait a bit and run <code>./relay client</code> again.</p><p>To see the client's logs, run <code>sudo docker compose -p relay-client -f /opt/relay-client/compose.yml logs --tail 40</code> on the server. Don't restart Snapchain to fix the client.</p></details>
         <details><summary>Approving a key fails, or a post stays pending</summary><p>Check that you used the FID's custody wallet, that the FID has storage, and that the key hasn't expired or been revoked. A read node passes posts on but doesn't queue them, so the client resends the same signed post up to twice. Load your feed before posting again, so you don't post twice.</p></details>
         <details><summary>A local port is already in use</summary><p>Stop the earlier client or tunnel, or pick other ports:</p><pre><code>RELAY_TUNNEL_PORT=13382 PORT=5175 ./relay client --local</code></pre><p>Then open <code>http://127.0.0.1:5175/</code>.</p></details>
-      </div>
-    </section>
-
-    <section id="proof" class="guide-section">
-      <div class="section-intro"><h2>What we tested</h2><p>On our own Snapchain 0.14.3 node, with a throwaway FID, <code>3356280</code>.</p></div>
-      <div class="section-body">
-        <p>On 20 October, with the client running locally, we posted, replied, liked, recasted and followed, and undid each one. We also tested both app filters, and approved, imported and revoked app keys. On 21 October we repeated it all through the hosted HTTPS client, with the client and node on the same server. All test keys were revoked afterwards; the test casts are still readable.</p>
+</section><section id="proof"><h2>Test records and limits</h2>
+<p>On 20 October 2026 we used the local client to post a cast and a reply, add and remove reactions, follow and unfollow, exercise app filters, and approve, import and revoke app keys. On 21 October we tested registration, posting, replies, reactions, follows, filters and revocation through the hosted HTTPS client on the same server as the node. Reactions and follows were reversed. The casts and replies remain readable; all test app keys were revoked.</p>
         <details><summary>Message hashes</summary><p>Cast <code class="hash">0x4f8122235ed0a713b94f407cfdde8b55b35f0998</code></p><p>Reply <code class="hash">0xe1555d459cdba1b5d356d8bd29e1bcb1213545f3</code></p><p>Load FID 3356280 in your client to find them. Full records are in <code>docs/LIVE-CLIENT-VERIFICATION.md</code> and <code>docs/public/HOSTED-CLIENT-VERIFICATION.md</code>.</p></details>
-        <p class="note">Still to do: on a second, fresh server, all three commands ran cleanly on 21 October, but sync and posting there aren't finished. Wallet steps so far used an automated signer. We still need someone else to follow this guide end to end with a real wallet extension.</p>
-      </div>
-    </section>
-
-    <footer>
-      <a class="brand" href="#start">Farcaster client</a><p>Your node. Your feed.</p>
-      <div><a href="https://snapchain.farcaster.xyz/" target="_blank" rel="noreferrer">Snapchain docs</a><a href="https://github.com/vrajdesai78/farcaster-bounty" target="_blank" rel="noreferrer">Repository (access required)</a></div>
-      <small>Updated 21 October 2026. Test results are from 20 and 21 October, not a live status. Project code is MIT licensed; upstream files and fonts keep their own licenses.</small>
-    </footer>
-  </main>
-</div>
-<div class="clipboard-status" role="status" aria-live="polite"></div>
-</body>
-</html>
+        <p class="note">Still to do: on a second, fresh server, all three commands ran cleanly on 21 October, but sync and posting there aren't finished. Wallet approval tests used an automated signer; a positive recovery-phrase flow was simulated rather than verified live. We still need someone else to follow this guide end to end with a real wallet extension.</p>
+</section><footer><p><a href="https://snapchain.farcaster.xyz/">Snapchain documentation</a> · <a href="https://github.com/vrajdesai78/farcaster-bounty">Source repository (access required)</a></p><small>Test records describe observations from 20–21 October 2026, not live status. Project code is MIT licensed; upstream code and fonts retain their own licenses.</small></footer></article></main><div class="clipboard-status" role="status" aria-live="polite"></div></body></html>
