@@ -118,13 +118,19 @@ Every reported shard must have single-digit `blockDelay`, positive advancing `ma
 
 1. Read By FID (for example `3`) and inspect profiles/casts. Following assembles the latest 15 casts per account in bounded batches of 50 follow records; “Load more” includes another follow batch. It is chronological, not a complete ranked feed. Cast removal records can appear in API results and are not rendered as posts.
 2. Use an existing disposable FID with active storage. Browser wallet must hold its custody account. Relay checks that mapping and storage before registering a scoped Ed25519 app key. `KEY_ADD` needs two EIP-712 signatures, the current user nonce, permissions/scopes and TTL. This registration is gasless; new FID/storage purchase is separate.
-3. Existing signer imports a registered 32-byte Ed25519 app key. Test recovery derives the first Ethereum account from a disposable recovery phrase, entirely in the browser. Prefer a browser wallet. Never put a main-wallet phrase in the client or any phrase/key into the public tutorial.
+3. Existing signer imports a registered 32-byte Ed25519 app key. Test recovery derives the first Ethereum account from a disposable recovery phrase, entirely in the browser. Prefer delegated app-key authorization through a browser wallet. Enter a recovery phrase only into software from developers you trust, after checking its code and the site you are using. Anyone with the phrase can control its wallet and funds. Use only a disposable test account; never put a main-wallet phrase in the client or any phrase/key into the public tutorial.
 4. Post a labelled test cast, reply, like/recast and reverse the reactions, follow/unfollow a test target. Relay sends signed protobuf bytes to your node, not custody secrets. A read node validates and gossips; validators commit; the node follows the block.
 5. Success requires a matching merge event for social messages. Relay captures message-shard cursors first, polls bounded pages and re-gossips identical bytes at most twice. A timeout remains pending. Keys are confirmed through signer state: matching registration nonce or present-before/absent-after revocation.
 6. Apply Include only or Exclude using a requesting app FID. Unknown/removed attribution is omitted from either filtered set. A self-authorized key uses its own user's requestFid; do not call that a shared Relay app identity.
 7. Revoke network authorization before finishing, or allow inactivity expiry. Forget removes only the local in-memory key. Reload also forgets it. Imported keys retain existing scopes/expiry; new Relay keys use a 24-hour inactivity window.
 
 Current node compatibility: shard 0 does not serve this message events API. Signer NotFound may be wrapped as HTTP 400, and requester nonce queries need literal `requesterFids[]=...` brackets. Relay handles these actual tested shapes rather than guessing nonces or treating relay acceptance as inclusion. See [current documentation differences](docs/CURRENT-DOCS-REVIEW.md).
+
+## Account storage and server storage
+
+Storage rent pays for an FID’s network allowance. Casts, follows (links) and reactions have separate limits, shared across all clients used by that account. Renting a larger AWS disk does not increase those limits. Storage purchases use the protocol’s contracts on OP Mainnet; this is separate from gasless app-key authorization and is not a gas fee per post.
+
+Query `GET /v1/storageLimitsByFid?fid=YOUR_FID` on your node to inspect each message type’s `used` and `limit` values and the account’s storage-unit details. Spare cast allowance does not imply spare follow allowance. Check current pricing and any expiry terms before purchasing or renewing; avoid copying old quota tables. See the [Storage API reference](https://snapchain.farcaster.xyz/reference/httpapi/storagelimits).
 
 ## Optional new disposable account
 
