@@ -2,6 +2,12 @@
 
 This guide covers the same setup as the interactive tutorial in `site/`. See [verification status](docs/public/READINESS.md) for completed checks and remaining tests.
 
+## First time using a terminal?
+
+Use Terminal on macOS, a terminal app on Linux, or Ubuntu inside WSL2 on Windows. Install the tools in that environment. Paste one command at a time and press Enter; wait for it to finish before continuing. After cloning, `cd farcaster-bounty` moves into the project folder. Run every `./relay` command from that same folder. Keep its hidden `.relay-state` directory so you can resume and clean up the same server.
+
+Start with reads: no Farcaster wallet is required to read a cast. GitHub access gets the code, AWS credentials manage the paid server, and the generated Relay login opens the hosted client. These are separate from Farcaster account authorization. The [interactive walkthrough](https://farcaster-client-sable.vercel.app/#prerequisites) includes tool checks and recovery steps.
+
 ## Prerequisites and costs
 
 On your local macOS/Linux computer (or WSL2), install Python 3.9+, OpenSSH, Git or an archive extractor. Node.js is only needed locally for the optional development mode; the hosted client builds inside its pinned container on EC2. For AWS, install/configure AWS CLI v2 with your own account credentials. Those cloud credentials are not third-party social API keys and are never copied to the server.

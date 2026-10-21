@@ -17,10 +17,10 @@ function updateCommands() {
   $('#dry-run-command').textContent = `${provision} --dry-run`;
   $('#first-step-title').textContent = mode === 'aws' ? 'Create the server' : 'Connect your existing node';
   $('#provision-description').textContent = mode === 'aws'
-    ? 'Creates paid AWS resources in us-east-1 by default. Saves server details and the private SSH key in .relay-state/.'
+    ? 'Creates paid AWS resources in us-east-1 by default. Saves server details and the private SSH key in .relay-state/. Wait for “Host ready” before starting Snapchain.'
     : 'Records your existing host and key path. The next command checks the node; the client installs separately beside it.';
   $('#node-description').textContent = mode === 'aws'
-    ? 'Installs Docker and starts the pinned node. Snapshot restore begins on the server.'
+    ? 'Installs Docker and starts the pinned node. Snapshot restore begins on the server. Wait for “Snapshot restore started,” then run the client command; you do not need to wait for full sync first.'
     : 'Reads the existing node’s status. Does not install software, replace configuration or restart it.';
   $('#aws-fields').hidden = mode !== 'aws';
   $('#existing-fields').hidden = mode !== 'existing';
