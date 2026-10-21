@@ -5,7 +5,7 @@ const isIPv4 = value => /^\d{1,3}(\.\d{1,3}){3}$/.test(value) && value.split('.'
 const publicIPv4 = () => $('#ssh-cidr').value.trim().replace(/\/32$/, '');
 
 function updateCommands() {
-  $('#command-status').textContent = 'Run these from the repository folder on your computer.';
+  $('#command-status').textContent = 'Run these in the project folder on your computer.';
   $('#command-status').classList.remove('error');
   const ip = publicIPv4();
   const host = $('#ssh-host').value.trim();
@@ -15,13 +15,13 @@ function updateCommands() {
     ? provision
     : `./relay provision --existing-host ${host || 'ubuntu@YOUR_SERVER'} --key ${quote(key || '~/.ssh/id_ed25519')}`;
   $('#dry-run-command').textContent = `${provision} --dry-run`;
-  $('#first-step-title').textContent = mode === 'aws' ? 'Create the server' : 'Connect your existing node';
+  $('#first-step-title').textContent = mode === 'aws' ? 'Create the server' : 'Connect your server';
   $('#provision-description').textContent = mode === 'aws'
-    ? 'Creates paid AWS resources in us-east-1 by default. Saves server details and the private SSH key in .relay-state/. Wait for “Host ready” before starting Snapchain.'
-    : 'Records your existing host and key path. The next command checks the node; the client installs separately beside it.';
+    ? 'Creates the server in us-east-1 and saves its details in .relay-state/. AWS billing starts here. Wait for “Host ready”.'
+    : 'Saves your server and key path. Nothing is installed yet.';
   $('#node-description').textContent = mode === 'aws'
-    ? 'Installs Docker and starts the pinned node. Snapshot restore begins on the server. Wait for “Snapshot restore started,” then run the client command; you do not need to wait for full sync first.'
-    : 'Reads the existing node’s status. Does not install software, replace configuration or restart it.';
+    ? 'Installs Docker, starts the node and begins the snapshot restore. Once you see “Snapshot restore started”, move on. No need to wait for sync.'
+    : 'Checks your node’s status. It doesn’t install, reconfigure or restart anything.';
   $('#aws-fields').hidden = mode !== 'aws';
   $('#existing-fields').hidden = mode !== 'existing';
   $('#setup-fields').setAttribute('aria-labelledby', mode === 'aws' ? 'aws-tab' : 'existing-tab');
@@ -83,9 +83,9 @@ for (const button of document.querySelectorAll('[data-copy]')) button.addEventLi
   const id = button.dataset.copy;
   const needsIPv4 = id === 'dry-run-command' || (id === 'provision-command' && mode === 'aws');
   if (needsIPv4 && !isIPv4(publicIPv4())) {
-    $('#command-status').textContent = 'Enter your public IPv4 above, then copy the command.';
+    if (mode !== 'aws') { mode = 'aws'; updateCommands(); }
+    $('#command-status').textContent = 'Enter your public IP address above first.';
     $('#command-status').classList.add('error');
-    if (mode !== 'aws') { mode = 'aws'; updateCommands(); $('#command-status').textContent = 'Enter your public IPv4 above, then copy the command.'; $('#command-status').classList.add('error'); }
     $('#ssh-cidr').focus();
     return;
   }
@@ -98,7 +98,7 @@ for (const button of document.querySelectorAll('[data-copy]')) button.addEventLi
   }
   try {
     await copyText(document.getElementById(id).textContent);
-    announce(button.dataset.runOn === 'server' ? 'Command copied. Run it on your server over SSH.' : 'Command copied. Run it in your local repository folder.');
+    announce(button.dataset.runOn === 'server' ? 'Command copied. Run it on your server over SSH.' : 'Command copied. Run it in the project folder.');
     $('#command-status').classList.remove('error');
   } catch (error) { announce(error.message); }
 });
