@@ -1,0 +1,15 @@
+**/*.zip
+**/*.tgz
+.snapchain-aws/
+.relay-state/
+.relay-private/
+.agents/
+.codex/
+.impeccable/
+SNAPCHAIN-OPERATIONS.md
+BOUNTY-PLAN.md
+docs/design/
+**/node_modules/
+**/dist/
+**/.env
+**/.env.*

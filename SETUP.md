@@ -10,7 +10,7 @@ Use a dedicated Linux host with 4 vCPU, 16 GB RAM, a public IP and 2 TB SSD. The
 
 The AWS principal needs: `ec2:Describe*`, `ec2:ImportKeyPair`, `ec2:CreateSecurityGroup`, `ec2:AuthorizeSecurityGroupIngress`, `ec2:RunInstances`, `ec2:CreateTags`, and `ssm:GetParameter` for public Ubuntu image discovery. Explicit cleanup also needs `ec2:StopInstances`, `ec2:TerminateInstances`, `ec2:DeleteSecurityGroup`, `ec2:DeleteKeyPair`. Scope credentials to the intended account/region. Do not hardcode credentials or attach them to the server.
 
-Download/extract the source package, or clone your published repository, then open its root directory. The three commands assume these prerequisites/source acquisition are complete.
+Request access to the private repository, clone it, then open its root directory. The hosted guide does not offer a public source download. The three commands assume these prerequisites/source acquisition are complete.
 
 ## 1. Provision compute
 

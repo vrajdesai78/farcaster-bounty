@@ -9,7 +9,7 @@ python3 -m unittest discover -s tests -v
 python3 scripts/prepare-repo.py
 ```
 
-Client checks: `cd client && npm ci && npm test && npm run build`. Static guide: `python3 scripts/serve-site.py`, then inspect desktop and mobile, command-copy validation, server-method switching, chapter navigation and source download. No build step is needed for site HTML/CSS/JS.
+Client checks: `cd client && npm ci && npm test && npm run build`. Static guide: `python3 scripts/serve-site.py`, then inspect desktop and mobile, command-copy validation, server-method switching, chapter navigation and the private-repository access instructions. No build step is needed for site HTML/CSS/JS.
 
 `relay` is Python 3.9+ with standard-library dependencies. Use subprocess argument arrays, private resumable state and stable EC2 client tokens. Never add implicit cloud-resource changes, restarts during progressing restore, automatic cleanup or embedded keys. Update the pinned image/config and upstream notice deliberately together, with an upgrade test.
 

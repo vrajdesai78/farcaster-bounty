@@ -8,7 +8,7 @@ import re
 import zipfile
 
 ROOT=Path(__file__).resolve().parents[1]
-FILES={'relay','README.md','SETUP.md','LICENSE','SECURITY.md','CONTRIBUTING.md','NOTICE.md','.gitignore'}
+FILES={'relay','README.md','SETUP.md','LICENSE','SECURITY.md','CONTRIBUTING.md','NOTICE.md','.gitignore','vercel.json','.vercelignore'}
 TREES=('client/','config/','site/','tests/','.github/','docs/public/')
 DOCS={'docs/CURRENT-DOCS-REVIEW.md','docs/LIVE-CLIENT-VERIFICATION.md'}
 SCRIPTS={'scripts/prepare-repo.py','scripts/serve-site.py','scripts/tunnel.sh'}
@@ -51,7 +51,7 @@ def build(output):
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--output',type=Path,default=ROOT/'site/assets/relay-source.zip')
+    parser.add_argument('--output',type=Path,default=ROOT/'.relay-private/relay-source.zip')
     args=parser.parse_args()
     try:
         manifest=build(args.output.resolve())

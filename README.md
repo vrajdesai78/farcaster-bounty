@@ -39,11 +39,18 @@ The client, node sync and real mainnet actions were verified on 20 October 2026.
 Read [SETUP.md](SETUP.md). Preview the static microsite locally:
 
 ```sh
-python3 scripts/prepare-repo.py
 python3 scripts/serve-site.py
 ```
 
-Open **http://127.0.0.1:4173/**. The guide contains no wallet/key entry form and makes no social API calls. `site/` is a buildless static site; it can be hosted separately from the local client. GitHub Pages deployment is manual through the included workflow after you enable Pages for your published repository.
+Open **http://127.0.0.1:4173/**. The guide contains no wallet/key entry form and makes no social API calls. `site/` is a buildless static site; it can be hosted separately from the local client. The repository is private; the hosted guide offers no source-code download. Collaborators need repository access to run the setup.
+
+### Deploy the guide on Vercel
+
+Import `vrajdesai78/farcaster-bounty` from GitHub and leave **Root Directory at the repository root (`.`)**. This differs from deploying the `site/` folder directly: the root `vercel.json` selects **Other**, skips installation/building, and publishes only `site/`. Leave dashboard build/output overrides disabled so the file applies. No environment variables are required. Click Deploy.
+
+The public deployment contains only the tutorial and its assets. The React client and its local proxy still run on your computer; Vercel does not run the node, SSH tunnel, wallet session or client proxy. `.vercelignore` excludes private state and generated source archives from uploads.
+
+After deployment, check the homepage, fonts/screenshots, chapter links and command copying at the returned HTTPS URL. “Open local client” requires Relay running locally on port 5173. GitHub Pages remains an optional manual workflow, but the current GitHub plan does not support Pages for this private repository.
 
 Run checks:
 
