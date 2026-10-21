@@ -1,6 +1,6 @@
 # Relay
 
-**Your node. Your feed.** A Farcaster client and practical guide for running your own Snapchain read node, without a third-party social API key.
+**Run your own Farcaster node and client.** Set up a Snapchain read node and host Relay on the same server. Read and post through your own node, without a third-party social API key.
 
 ## Start with three commands
 
