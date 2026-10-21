@@ -6,7 +6,7 @@ This guide covers the same setup as the interactive tutorial in `site/`. See [ve
 
 Use Terminal on macOS, a terminal app on Linux, or Ubuntu inside WSL2 on Windows. Install the tools in that environment. Paste one command at a time and press Enter; wait for it to finish before continuing. After cloning, `cd farcaster-bounty` moves into the project folder. Run every `./relay` command from that same folder. Keep its hidden `.relay-state` directory so you can resume and clean up the same server.
 
-Start with reads: no Farcaster wallet is required to read a cast. GitHub access gets the code, AWS credentials manage the paid server, and the generated Relay login opens the hosted client. These are separate from Farcaster account authorization. The [interactive walkthrough](https://farcaster-client-sable.vercel.app/#prerequisites) includes tool checks and recovery steps.
+Start with reads: no Farcaster wallet is required to read a cast. GitHub access gets the code, AWS credentials manage the paid server, and the generated client login opens the hosted client. These are separate from Farcaster account authorization. The [interactive walkthrough](https://farcaster-client-sable.vercel.app/#prerequisites) includes tool checks and recovery steps.
 
 ## Prerequisites and costs
 
@@ -108,7 +108,7 @@ Install Node.js 22.12+ or a newer supported LTS on your computer, then run:
 ./relay client --local
 ```
 
-This keeps the original loopback client/proxy at `http://127.0.0.1:5173/` and an SSH tunnel on port 13381. Keep the terminal running. Choose different ports with `RELAY_TUNNEL_PORT=13382 PORT=5175 ./relay client --local` when needed. Relay refuses to replace an unrelated tunnel process. First SSH connections record the host key using accept-new; changed keys are rejected. Verify the initial fingerprint through a trusted channel.
+This keeps the original loopback client/proxy at `http://127.0.0.1:5173/` and an SSH tunnel on port 13381. Keep the terminal running. Choose different ports with `RELAY_TUNNEL_PORT=13382 PORT=5175 ./relay client --local` when needed. The setup helper refuses to replace an unrelated tunnel process. First SSH connections record the host key using accept-new; changed keys are rejected. Verify the initial fingerprint through a trusted channel.
 
 `vite preview` alone does not provide a node connection. Vercel hosts the static guide, while the production client and node run on EC2. Do not expose the Vite development server publicly.
 
@@ -123,14 +123,14 @@ Every reported shard must have single-digit `blockDelay`, positive advancing `ma
 ## Read, authorize and write
 
 1. Read By FID (for example `3`) and inspect profiles/casts. Following assembles the latest 15 casts per account in bounded batches of 50 follow records; “Load more” includes another follow batch. It is chronological, not a complete ranked feed. Cast removal records can appear in API results and are not rendered as posts.
-2. Use an existing disposable FID with active storage. Browser wallet must hold its custody account. Relay checks that mapping and storage before registering a scoped Ed25519 app key. `KEY_ADD` needs two EIP-712 signatures, the current user nonce, permissions/scopes and TTL. This registration is gasless; new FID/storage purchase is separate.
+2. Use an existing disposable FID with active storage. Browser wallet must hold its custody account. The client checks that mapping and storage before registering a scoped Ed25519 app key. `KEY_ADD` needs two EIP-712 signatures, the current user nonce, permissions/scopes and TTL. This registration is gasless; new FID/storage purchase is separate.
 3. Existing signer imports a registered 32-byte Ed25519 app key. Test recovery derives the first Ethereum account from a disposable recovery phrase, entirely in the browser. Prefer delegated app-key authorization through a browser wallet. Enter a recovery phrase only into software from developers you trust, after checking its code and the site you are using. Anyone with the phrase can control its wallet and funds. Use only a disposable test account; never put a main-wallet phrase in the client or any phrase/key into the public tutorial.
-4. Post a labelled test cast, reply, like/recast and reverse the reactions, follow/unfollow a test target. Relay sends signed protobuf bytes to your node, not custody secrets. A read node validates and gossips; validators commit; the node follows the block.
-5. Success requires a matching merge event for social messages. Relay captures message-shard cursors first, polls bounded pages and re-gossips identical bytes at most twice. A timeout remains pending. Keys are confirmed through signer state: matching registration nonce or present-before/absent-after revocation.
-6. Apply Include only or Exclude using a requesting app FID. Unknown/removed attribution is omitted from either filtered set. A self-authorized key uses its own user's requestFid; do not call that a shared Relay app identity.
-7. Revoke network authorization before finishing, or allow inactivity expiry. Forget removes only the local in-memory key. Reload also forgets it. Imported keys retain existing scopes/expiry; new Relay keys use a 24-hour inactivity window.
+4. Post a labelled test cast, reply, like/recast and reverse the reactions, follow/unfollow a test target. The client sends signed protobuf bytes to your node, not custody secrets. A read node validates and gossips; validators commit; the node follows the block.
+5. Success requires a matching merge event for social messages. The client captures message-shard cursors first, polls bounded pages and re-gossips identical bytes at most twice. A timeout remains pending. Keys are confirmed through signer state: matching registration nonce or present-before/absent-after revocation.
+6. Apply Include only or Exclude using a requesting app FID. Unknown/removed attribution is omitted from either filtered set. A self-authorized key uses its own user's requestFid; do not call that a shared app identity.
+7. Revoke network authorization before finishing, or allow inactivity expiry. Forget removes only the local in-memory key. Reload also forgets it. Imported keys retain existing scopes/expiry; new app keys use a 24-hour inactivity window.
 
-Current node compatibility: shard 0 does not serve this message events API. Signer NotFound may be wrapped as HTTP 400, and requester nonce queries need literal `requesterFids[]=...` brackets. Relay handles these actual tested shapes rather than guessing nonces or treating relay acceptance as inclusion. See [current documentation differences](docs/CURRENT-DOCS-REVIEW.md).
+Current node compatibility: shard 0 does not serve this message events API. Signer NotFound may be wrapped as HTTP 400, and requester nonce queries need literal `requesterFids[]=...` brackets. The client handles these actual tested shapes rather than guessing nonces or treating relay acceptance as inclusion. See [current documentation differences](docs/CURRENT-DOCS-REVIEW.md).
 
 ## Account storage and server storage
 
@@ -180,7 +180,7 @@ Managed-server lifecycle commands first print a plan with no change:
 
 Repeating the chosen command with `--confirm INSTANCE_ID` explicitly authorizes it. The ownership tag must match local state. Stop retains disk charges. Destroy permanently terminates the instance and configured delete-on-termination root disk, waits for termination and deletes its recorded security group/key pair. The default VPC/subnet are never deleted. Inspect AWS for retained resources/snapshots and partial cleanup failures. No automatic shutdown, deletion, paid monitoring or host-wide pruning is installed.
 
-Adopted hosts are never stopped/destroyed by Relay. The hosted client command installs separate client services on an adopted host; the node check remains read-only. An OS shutdown previously configured outside Relay is outside this helper; inspect/manage it yourself. Private deployment instructions and histories are not part of the public source package.
+Adopted hosts are never stopped/destroyed by the setup helper. The hosted client command installs separate client services on an adopted host; the node check remains read-only. Inspect and manage any OS shutdown schedule configured separately from this helper yourself. Private deployment instructions and histories are not part of the public source package.
 
 ## Evidence and remaining gates
 

@@ -47,7 +47,7 @@ export function createRelayServer(options) {
       let decoded='';
       if(auth.startsWith('Basic ') && auth.length<1024) decoded=Buffer.from(auth.slice(6),'base64').toString('utf8');
       const provided=createHash('sha256').update(decoded).digest();
-      if(!timingSafeEqual(provided,expected)) return json(res,401,{error:'Sign in with the generated Relay login.'},{'WWW-Authenticate':'Basic realm="Relay", charset="UTF-8"'});
+      if(!timingSafeEqual(provided,expected)) return json(res,401,{error:'Sign in with the generated client login.'},{'WWW-Authenticate':'Basic realm="Farcaster client", charset="UTF-8"'});
       const url=new URL(req.url,origin);
       if(req.url.length>8192) return json(res,414,{error:'Request URL too long.'});
       if(url.pathname==='/healthz') return json(res,200,{status:'ok'});
@@ -110,6 +110,6 @@ export function createRelayServer(options) {
 if(process.argv[1] && resolve(process.argv[1])===fileURLToPath(import.meta.url)) {
   const server=createRelayServer({origin:process.env.PUBLIC_ORIGIN,loginHash:process.env.RELAY_LOGIN_HASH,
     target:process.env.SNAPCHAIN_URL,directory:process.env.STATIC_DIR,rpcAuth:process.env.SNAPCHAIN_RPC_AUTH});
-  server.listen(Number(process.env.PORT || 3080),'127.0.0.1',()=>console.log('Relay production service listening on loopback.'));
+  server.listen(Number(process.env.PORT || 3080),'127.0.0.1',()=>console.log('Farcaster client service listening on loopback.'));
   for(const signal of ['SIGINT','SIGTERM']) process.on(signal,()=>server.close(()=>process.exit(0)));
 }

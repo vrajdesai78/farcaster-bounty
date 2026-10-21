@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Relay's resumable local orchestrator. Python 3.9+, no third-party Python packages."""
+"""Resumable local setup helper. Python 3.9+, no third-party Python packages."""
 import argparse
 import base64
 import contextlib
@@ -246,7 +246,7 @@ def tunnel(state):
             return
     try:
         with socket.create_connection(('127.0.0.1', TUNNEL_PORT), timeout=1):
-            raise RuntimeError('The configured tunnel port is already occupied by an unmanaged tunnel. Stop that local tunnel first; Relay will not replace it.')
+            raise RuntimeError('The configured tunnel port is already occupied by an unmanaged tunnel. Stop that local tunnel first; the setup helper will not replace it.')
     except (ConnectionRefusedError, socket.timeout):
         pass
     command = ssh_args(state)
@@ -268,7 +268,7 @@ def local_client(args):
         run(['npm', 'ci'], capture=False, cwd=ROOT / 'client')
         marker.write_text(digest)
     environment = dict(os.environ, SNAPCHAIN_URL='http://127.0.0.1:' + str(TUNNEL_PORT))
-    print('Relay: http://127.0.0.1:' + os.environ.get('PORT', '5173') + '\nCtrl-C stops the local client; the remote node keeps running.', flush=True)
+    print('Farcaster client: http://127.0.0.1:' + os.environ.get('PORT', '5173') + '\nCtrl-C stops the local client; the remote node keeps running.', flush=True)
     run(['npm', 'run', 'dev'], capture=False, cwd=ROOT / 'client', env=environment)
 
 
@@ -487,7 +487,7 @@ def lifecycle(args):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Relay: provision compute, start Snapchain, launch your client. No shutdown timers.')
+    parser = argparse.ArgumentParser(description='Provision compute, start Snapchain, launch your client. No shutdown timers.')
     commands = parser.add_subparsers(dest='command', required=True)
     p = commands.add_parser('provision', help='Create paid AWS compute, or adopt an existing server')
     p.add_argument('--ack-costs', action='store_true'); p.add_argument('--dry-run', action='store_true')
@@ -520,7 +520,7 @@ if __name__ == '__main__':
     try:
         main()
     except (RuntimeError, ValueError, OSError, KeyError, IndexError) as error:
-        print('Relay:', str(error), file=sys.stderr)
+        print('Setup:', str(error), file=sys.stderr)
         sys.exit(1)
     except KeyboardInterrupt:
         print('\nLocal command stopped. Remote resources were not stopped or deleted.')

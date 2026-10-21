@@ -1,6 +1,6 @@
-# Relay
+# Farcaster node and client
 
-**Run your own Farcaster node and client.** Set up a Snapchain read node and host Relay on the same server. Read and post through your own node, without a third-party social API key.
+**Run your own Farcaster node and client.** Set up a Snapchain read node and host the Farcaster client on the same server. Read and post through your own node, without a third-party social API key.
 
 ## Start with three commands
 
@@ -52,7 +52,7 @@ The public deployment contains only the tutorial and its assets. The production 
 
 ### Hosted client and local development
 
-`./relay client` builds and hosts Relay on the same EC2 as Snapchain. Caddy manages HTTPS using a free IP-based sslip.io hostname, or your optional `--domain`. The generated login protects both the interface and API. Signing material stays in browser memory. See [the hosted-client instructions](SETUP.md#3-deploy-the-hosted-client) for credentials, network ports and certificate checks.
+`./relay client` builds and hosts the Farcaster client on the same EC2 as Snapchain. Caddy manages HTTPS using a free IP-based sslip.io hostname, or your optional `--domain`. The generated login protects both the interface and API. Signing material stays in browser memory. See [the hosted-client instructions](SETUP.md#3-deploy-the-hosted-client) for credentials, network ports and certificate checks.
 
 For development, `./relay client --local` retains the original local proxy and SSH tunnel at `http://127.0.0.1:5173/`. This optional mode needs local Node.js and a running terminal. A static upload of `client/dist` to Vercel supplies neither hosted backend nor local connection. Keep the guide project’s Root Directory at `.`.
 

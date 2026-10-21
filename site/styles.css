@@ -34,9 +34,6 @@ pre code { overflow-wrap: normal; }
 p { margin: 0 0 20px; }
 .topbar { position: sticky; top: 0; z-index: 20; height: 74px; display: flex; align-items: center; gap: 40px; padding: 0 40px; background: #fff; border-bottom: 1px solid var(--line); }
 .brand { display: inline-flex; align-items: center; gap: 11px; color: var(--ink); text-decoration: none; font-size: 28px; font-weight: 650; letter-spacing: -.03em; }
-.brand-mark { display: inline-flex; gap: 5px; width: 27px; height: 25px; flex: none; }
-.brand-mark i { width: 10px; height: 25px; background: var(--accent); border-radius: 3px; }
-.brand-mark i:last-child { background: #9278eb; }
 .topbar nav { display: flex; gap: 28px; margin-left: 20px; }
 .topbar nav a { font-size: 14px; color: var(--muted); text-decoration: none; }
 .topbar nav a:hover { color: var(--accent); }
@@ -171,7 +168,7 @@ footer small { display: block; font-size: 11px; line-height: 1.8; color: var(--m
   :root { scroll-padding-top: 84px; }
   .topbar { height: 66px; padding: 0 20px; gap: 16px; }
   .topbar nav { display: none; }
-  .topbar .brand { font-size: 25px; }
+  .topbar .brand { font-size: 20px; }
   .topbar .button { font-size: 12px; padding: 10px 12px; gap: 8px; }
   .layout { display: block; }
   .chapter-rail { display: none; }

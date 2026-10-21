@@ -34,5 +34,5 @@ const server = http.createServer(async (req, res) => {
     res.end(await response.text());
   } catch { json(res, 502, { error: 'Node unavailable. Check your SSH tunnel and snapshot progress.' }); }
 });
-server.listen(port, '127.0.0.1', () => console.log(`Relay: http://127.0.0.1:${port} · node ${target.origin}`));
+server.listen(port, '127.0.0.1', () => console.log(`Farcaster client: http://127.0.0.1:${port} · node ${target.origin}`));
 for (const signal of ['SIGINT','SIGTERM']) process.on(signal, () => { server.close(); void vite.close().then(() => process.exit(0)); });
