@@ -16,7 +16,27 @@ Use a dedicated Linux host with 4 vCPU, 16 GB RAM, a public IP and 2 TB SSD. The
 
 The AWS principal needs: `ec2:Describe*`, `ec2:ImportKeyPair`, `ec2:CreateSecurityGroup`, `ec2:AuthorizeSecurityGroupIngress`, `ec2:RunInstances`, `ec2:CreateTags`, and `ssm:GetParameter` for public Ubuntu image discovery. Explicit cleanup also needs `ec2:StopInstances`, `ec2:TerminateInstances`, `ec2:DeleteSecurityGroup`, `ec2:DeleteKeyPair`. Scope credentials to the intended account/region. Do not hardcode credentials or attach them to the server.
 
-Request access to the private repository, clone it, then open its root directory. The hosted guide does not offer a public source download. The three commands assume these prerequisites/source acquisition are complete.
+## Download and check the setup helper
+
+`./relay` is a Python script in this repository, not a preinstalled command. Request private repository access and authenticate Git with GitHub before cloning. In a terminal on your computer, check the required tools and AWS login:
+
+```sh
+git --version
+python3 --version
+ssh -V
+aws --version
+aws sts get-caller-identity
+```
+
+The first four commands print versions; the last identifies the AWS account that will pay for the server. Resolve missing tools or login errors before proceeding. Then download the project:
+
+```sh
+git clone https://github.com/vrajdesai78/farcaster-bounty.git
+cd farcaster-bounty
+./relay --help
+```
+
+`git clone` downloads the project, `cd` enters its folder, and `./relay --help` lists the helper's commands without creating resources. Expect output starting with `usage: relay`. If cloning reports “Repository not found”, check access and GitHub authentication. If you already cloned it, use that existing folder. Run every later command there and keep `.relay-state` for retries and cleanup. The hosted guide does not offer a public source download.
 
 ## 1. Provision compute
 

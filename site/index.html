@@ -20,13 +20,35 @@
 <p>Most of the time, you use Farcaster through someone else’s app and infrastructure. Here, we will run the app and its node ourselves. By the end, you will have an HTTPS address you can open on your phone, a local copy of Farcaster’s messages on your server, and a way to verify where your reads and writes go.</p>
 <p>You can follow the reading steps without a Farcaster account. To publish, you will need an existing account with storage and access to its custody wallet. We will get to those terms when we reach posting.</p>
 </header>
-<section id="quickstart"><h2>The setup, in three commands</h2>
-<p>Already have the tools and repository? From the project folder, replace <code>YOUR_IP</code> with your public IPv4 address. Run one command at a time, waiting for each to finish:</p>
-<pre><code>./relay provision --ack-costs --ssh-cidr YOUR_IP/32
-./relay node
-./relay client</code></pre>
-<p>The first command creates paid AWS resources. The second starts the node’s snapshot restore. The third builds the client and prints its HTTPS address and login. Installation finishes before sync does; wait for <a href="#sync">the sync check</a> before expecting recent posts.</p>
-<p><strong>Before spending anything:</strong> this setup uses an <code>m5.xlarge</code> server and a 2,000 GiB disk. AWS charges for compute, provisioned disk, public IPv4 and applicable transfer. Sync can take many hours. Nothing shuts down automatically, and stopping compute leaves disk charges. <a href="#prerequisites">Start with the prerequisites</a> if this is your first time.</p>
+<section id="quickstart"><h2>Quickstart: get the code, then run setup</h2>
+<p><code>./relay</code> is a Python script included in this repository. It is not a command that comes with your computer. First download the project, then run the script from inside its folder.</p>
+<h3>Before you start</h3>
+<p>On your computer, install Git, Python 3.9+, OpenSSH and AWS CLI v2, then configure the AWS CLI with your account. You also need access to the <a href="https://github.com/vrajdesai78/farcaster-bounty">private repository</a> and GitHub authentication for cloning. If any of that is new, follow <a href="#prerequisites">the preparation steps below</a> before continuing.</p>
+<p>Run these checks in Terminal on macOS or Linux, or in Ubuntu on Windows with WSL2:</p>
+<pre><code>git --version
+python3 --version
+ssh -V
+aws --version
+aws sts get-caller-identity</code></pre>
+<p>The first four commands print installed versions. The last confirms which AWS account the helper will use. If a tool is missing or AWS reports a login error, fix that before creating a server.</p>
+<h3>Download the project and open its folder</h3>
+<div class="copy-block"><pre><code id="quickstart-clone-command">git clone https://github.com/vrajdesai78/farcaster-bounty.git
+cd farcaster-bounty
+./relay --help</code></pre><button class="copy-button" data-copy="quickstart-clone-command" aria-label="Copy quickstart download commands">Copy</button></div>
+<p><code>git clone</code> downloads the code into a new <code>farcaster-bounty</code> folder. <code>cd</code> moves your terminal into that folder. <code>./relay --help</code> checks that the helper runs and lists its commands; it creates no AWS resources. You should see a line beginning <code>usage: relay</code>.</p>
+<p>If cloning says “Repository not found”, check repository access and your GitHub login. If you already cloned the project, open that existing folder instead of cloning it again. Keep using that folder for every command below.</p>
+<h3>Create the server</h3>
+<p><strong>This starts AWS billing.</strong> The default is one <code>m5.xlarge</code> server with a 2,000 GiB disk in <code>us-east-1</code>. Compute, disk, public IPv4 and applicable transfer cost money. Check <a href="https://calculator.aws/">AWS pricing</a> first; nothing shuts down automatically.</p>
+<p>Open <a href="https://checkip.amazonaws.com/" target="_blank" rel="noreferrer">checkip.amazonaws.com</a> and replace <code>YOUR_IP</code> below with the IPv4 address it shows. The <code>/32</code> allows SSH only from that address. The <a href="#commands">command builder below</a> can fill this in for you.</p>
+<pre><code>./relay provision --ack-costs --ssh-cidr YOUR_IP/32</code></pre>
+<p><code>provision</code> creates the server, disk, SSH key pair and security group. <code>--ack-costs</code> acknowledges the paid resources; <code>--ssh-cidr</code> limits who can connect over SSH. Wait until the command finishes with <code>Host ready:</code>. The helper saves the connection details in <code>.relay-state</code> inside your project folder.</p>
+<h3>Install and start the node</h3>
+<pre><code>./relay node</code></pre>
+<p>The helper connects to that server over SSH, installs Docker and starts Snapchain. Snapchain begins downloading and restoring a snapshot of Farcaster’s data. When the command prints <code>Snapshot restore started</code> and finishes, continue with the client; sync keeps running in the background.</p>
+<h3>Install and open the client</h3>
+<pre><code>./relay client</code></pre>
+<p>This builds the Farcaster client on the same server and sets up HTTPS. Wait for <code>Hosted client ready:</code>, then open the printed address and sign in with the generated client login. Save the login privately. You can close your terminal after installation.</p>
+<p>The website may be ready before its node can return recent posts. Sync can take many hours or run overnight. Follow <a href="#sync">the sync check</a> before using the feed. To stop charges when you are finished, follow <a href="#cleanup">cleanup</a>; stopping compute still leaves disk charges.</p>
 </section>
 <nav class="contents" aria-label="On this page"><h2>In this guide</h2><ol>
 <li><a href="#how-it-works">What we’re running</a></li><li><a href="#prerequisites">Prepare your computer and AWS account</a></li><li><a href="#commands">Create the server and install the software</a></li><li><a href="#sync">Wait for sync and verify a read</a></li><li><a href="#client">Use the client, then publish a test cast</a></li><li><a href="#cleanup">Stop or delete the server</a></li></ol><p><a href="#troubleshooting">Troubleshooting</a> · <a href="#proof">Test records and limits</a></p></nav>
@@ -49,11 +71,11 @@ python3 --version
 ssh -V
 aws --version
 aws sts get-caller-identity</code></pre>
-        <p>Each line should print a version (AWS should say <code>aws-cli/2</code>), and the last should print your AWS account. “Command not found” means that tool still needs installing.</p>
-        <p>Then download the project:</p>
+        <p>Each line should print a version (AWS should say <code>aws-cli/2</code>), and the last should print your AWS account. “Command not found” means that tool still needs installing. If the AWS account check fails, finish configuring or signing in to the AWS CLI before proceeding.</p>
+        <p>If you did not already download the project in the quickstart, clone it now. GitHub must recognize an account with repository access:</p>
         <div class="copy-block"><pre><code id="clone-command">git clone https://github.com/vrajdesai78/farcaster-bounty.git
 cd farcaster-bounty</code></pre><button class="copy-button" data-copy="clone-command" aria-label="Copy clone commands">Copy</button></div>
-        <p>Run every later command from this folder, and keep it. The helper saves your server details and SSH key in a hidden <code>.relay-state</code> folder here, and needs them to manage or delete the server.</p>
+        <p>Run <code>./relay --help</code> here. Seeing <code>usage: relay</code> confirms that you are in the right folder and can run the helper without creating resources. In <code>./relay</code>, <code>./</code> means “in this folder”.</p><p>Run every later command from this folder, and keep it. The helper saves your server details and SSH key in a hidden <code>.relay-state</code> folder here, and needs them to manage or delete the server.</p>
         <details><summary>What AWS creates and charges for</summary><p>One Ubuntu 22.04 <code>m5.xlarge</code> server (4 vCPU, 16 GB RAM) with a 2,000 GiB encrypted gp3 disk (3,000 IOPS, 125 MiB/s), plus an SSH key pair and a security group. It uses your default VPC and creates no NAT gateway, load balancer or paid monitoring.</p><p>You pay for the server, the whole disk, a public IPv4 address and data transfer. A stopped server still pays for its disk, and nothing shuts down automatically. Price it with the <a href="https://calculator.aws/" target="_blank" rel="noreferrer">AWS calculator</a> first.</p></details>
         <details><summary>AWS permissions and open ports</summary><p>Your AWS user needs to describe EC2 resources, create key pairs and security groups, launch and tag instances, and read <code>ssm:GetParameter</code> to find the Ubuntu image. Cleanup also needs stop, terminate and delete permissions. <code>SETUP.md</code> lists the exact actions.</p><p>SSH only accepts your own IP address. Snapchain's peer ports, UDP 3382 and TCP 3383, are public, and so are 80 and 443 for the client's HTTPS. The HTTP API on port 3381 and metrics listen only on the server's loopback interface. The gRPC API on TCP 3383 is publicly reachable. Your AWS credentials never leave your computer.</p></details>
         <details><summary>Which login is which?</summary><p><strong>GitHub</strong> gets you the code. “Repository not found” usually means your account doesn't have access yet.</p><p><strong>AWS</strong> pays for the server. If your organization manages the account, ask an admin for the permissions above.</p><p><strong>The client login</strong> is created in step 2 and protects your client's web address.</p><p><strong>Your Farcaster wallet</strong> is only needed to post, in step 4. Never paste credentials or recovery phrases into this guide.</p></details>

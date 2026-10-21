@@ -90,7 +90,9 @@ for (const button of document.querySelectorAll('[data-copy]')) button.addEventLi
   }
   try {
     await copyText(document.getElementById(id).textContent);
-    announce(button.dataset.runOn === 'server' ? 'Command copied. Run it on your server over SSH.' : 'Command copied. Run it in the project folder.');
+    announce(button.dataset.runOn === 'server' ? 'Command copied. Run it on your server over SSH.'
+      : ['clone-command', 'quickstart-clone-command'].includes(id) ? 'Commands copied. Run them on your computer, in the folder where you keep projects.'
+      : 'Command copied. Run it in the project folder.');
     $('#command-status').classList.remove('error');
   } catch (error) { announce(error.message); }
 });
