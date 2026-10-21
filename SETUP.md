@@ -1,4 +1,4 @@
-# Run your own Farcaster node and Relay client
+# Running your own Farcaster client
 
 This guide covers the same setup as the interactive tutorial in `site/`. See [verification status](docs/public/READINESS.md) for completed checks and remaining tests.
 

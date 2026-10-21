@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#6d4aff">
   <meta name="description" content="Run a Snapchain read node and use Relay to read and post on Farcaster. A step-by-step guide to the server, account, client, costs and cleanup.">
-  <title>Relay — Run your own Farcaster node</title>
+  <title>Relay — Running your own Farcaster client</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="preload" href="assets/instrument-sans.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="styles.css">
@@ -44,8 +44,8 @@
 
     <section id="start" class="hero">
       <div class="hero-copy">
-        <h1>Run your own<br> Farcaster node.</h1>
-        <p class="lede">Run a Snapchain node on AWS. Open Relay in your browser to read casts, post and follow people.</p>
+        <h1>Running your own<br> Farcaster client.</h1>
+        <p class="lede">Run Relay, your Farcaster client, beside your own Snapchain node on AWS. Read casts, post and follow people in your browser.</p>
         <div class="hero-actions"><a class="button primary" href="#prerequisites">Start the setup <span aria-hidden="true">↓</span></a><a class="text-link" href="#how-it-works">Understand the pieces</a></div>
         <p class="hero-note">Start by reading a real post from your node. No Farcaster wallet is needed for that. You need a computer for setup; afterward, the client works on your phone too. AWS charges apply, and sync takes hours.</p>
       </div>
@@ -56,7 +56,7 @@
     </section>
 
     <section id="how-it-works" class="guide-section full-section">
-      <div class="section-intro"><h2>How the pieces connect</h2><p>Farcaster is the social protocol. Snapchain keeps its shared social data in sync. Relay is the client we built to use it.</p></div>
+      <div class="section-intro"><h2>How the pieces connect</h2><p>Farcaster is the network of accounts and signed social messages. Snapchain keeps those messages in sync. A client is the app you open to read and post; here, that app is Relay.</p></div>
       <div class="places">
         <div><h3>This website</h3><p>Explains the setup. It is hosted on Vercel and never connects to your node or asks for wallet keys.</p></div>
         <div><h3>Your computer</h3><p>Runs the setup commands. After deployment, you can close the terminal and use Relay in a browser.</p></div>
@@ -66,18 +66,26 @@
         <div class="mode-tabs" role="tablist" aria-label="Follow a network request">
           <button id="read-tab" role="tab" aria-selected="true" aria-controls="read-path" data-path="read">Read a feed</button>
           <button id="write-tab" role="tab" aria-selected="false" aria-controls="write-path" tabindex="-1" data-path="write">Publish a cast</button>
+          <button id="sync-tab" role="tab" aria-selected="false" aria-controls="sync-path" tabindex="-1" data-path="sync">Sync the node</button>
         </div>
         <div id="read-path" role="tabpanel" aria-labelledby="read-tab">
           <ol class="network-path read-path" aria-label="A feed request and response">
             <li><strong>Your browser</strong><span>Ask for casts</span></li><li><strong>HTTPS</strong><span>Encrypted connection</span></li><li><strong>Relay service</strong><span>On your EC2</span></li><li><strong>Your node</strong><span>Return stored data</span></li>
           </ol>
-          <p class="path-caption">Enter an FID in Relay. Relay reads from the node on the same server and returns the casts to your browser.</p>
+          <p class="path-caption"><strong>Try a real read:</strong> choose By FID, enter <code>3356280</code> and press Load feed. The request goes to your node; its stored casts come back along the same path. Reading does not need a wallet signature.</p>
         </div>
         <div id="write-path" role="tabpanel" aria-labelledby="write-tab" hidden>
           <ol class="network-path" aria-label="A signed cast travels to validators">
             <li><strong>Your browser</strong><span>Sign your cast</span></li><li><strong>HTTPS</strong><span>Encrypted connection</span></li><li><strong>Relay service</strong><span>Pass signed bytes</span></li><li><strong>Your node</strong><span>Check and relay</span></li><li><strong>Validators</strong><span>Commit a block</span></li>
           </ol>
-          <p class="path-caption">Your node follows the committed block. Relay checks for the matching result before confirming the post. “Accepted for relay” alone is not confirmation.</p>
+          <p class="path-caption"><strong>Real example:</strong> our test account posted “Relay live verification” through its own read node. Its app key signed the cast in the browser. Validators committed the message, and the node made the result readable. <a href="#proof">See the recorded cast hash</a>.</p>
+          <ol class="confirmation-flow" aria-label="Confirmation returns to your client"><li>Validators commit the message</li><li>Your node applies the block</li><li>Relay shows confirmation</li></ol>
+          <p class="path-caption">“Accepted for relay” only means the node received the signed message. Relay waits for a matching result before saying the action is confirmed.</p>
+        </div>
+        <div id="sync-path" role="tabpanel" aria-labelledby="sync-tab" hidden>
+          <ol class="network-path" aria-label="A new node joins the network"><li><strong>Download a snapshot</strong><span>Fetch a recent copy of network state.</span></li><li><strong>Restore the database</strong><span>Unpack that copy onto your server’s disk.</span></li><li><strong>Catch up on blocks</strong><span>Apply what happened after the snapshot.</span></li><li><strong>Keep following</strong><span>Apply new blocks as validators commit them.</span></li></ol>
+          <p class="path-caption"><strong>Example:</strong> while your snapshot downloads, someone posts a new cast. That cast is newer than the saved copy. Catch-up brings the node forward so it can return newer posts too. Finishing the download is only the first stage.</p>
+          <p class="path-caption">A shard is a separate lane of the chain. <code>./relay status --verify</code> checks that every reported shard is near the head and advancing, then reads a real cast. <a href="#sync">Check your node’s progress</a>.</p>
         </div>
       </div>
       <p class="note">A read node can relay writes. It follows committed blocks but does not vote on them. Running one does not make you a validator or earn validator rewards. <a href="https://snapchain.farcaster.xyz/node-types" target="_blank" rel="noreferrer">Read about node roles.</a></p>
@@ -165,9 +173,26 @@ cd farcaster-bounty</code></pre><button class="copy-button" data-copy="clone-com
       </div>
     </section>
 
-    <section id="concepts" class="guide-section">
-      <div class="section-intro"><h2>Accounts and keys</h2><p>Your account, its app permissions and the server are separate things.</p></div>
+    <section id="concepts" class="guide-section full-section">
+      <div class="section-intro"><h2>Your account, keys and storage</h2><p>Your FID identifies you. A wallet controls the account. An app key signs everyday actions. Your server runs the software.</p></div>
       <div class="section-body">
+        <div class="path-explainer">
+          <div class="mode-tabs" role="tablist" aria-label="Account concepts">
+            <button id="keys-tab" role="tab" aria-selected="true" aria-controls="keys-flow" data-concept="keys">Authorize an app key</button>
+            <button id="storage-tab" role="tab" aria-selected="false" aria-controls="storage-flow" tabindex="-1" data-concept="storage">Account storage vs disk</button>
+          </div>
+          <div id="keys-flow" role="tabpanel" aria-labelledby="keys-tab">
+            <ol class="network-path" aria-label="Authorize a separate key for everyday posting"><li><strong>Custody wallet</strong><span>Approve a new app key, its permissions and inactivity window.</span></li><li><strong>Your node</strong><span>Relay the signed KEY_ADD and check the key becomes registered.</span></li><li><strong>App key in Relay</strong><span>Sign casts, reactions and follows without another wallet prompt each time.</span></li></ol>
+            <p class="path-caption"><strong>Real example:</strong> FID <code>3356280</code> authorized a separate app key, posted a cast and revoked the key afterward. The FID stayed the same throughout. This registration was gasless; no OP Mainnet transaction was needed for the app key.</p>
+            <p class="path-caption">The private app key is created and kept in your browser’s memory. Your wallet signs the permission; the server receives signed messages, not the wallet’s recovery phrase. Reloading forgets the local key. Revoking removes its network permission.</p>
+          </div>
+          <div id="storage-flow" role="tabpanel" aria-labelledby="storage-tab" hidden>
+            <ol class="network-path" aria-label="Storage rent changes an account allowance"><li><strong>Rent account storage</strong><span>Pay through the protocol’s contracts on OP Mainnet.</span></li><li><strong>Your FID gets an allowance</strong><span>Separate limits apply to casts, follows and reactions.</span></li><li><strong>Use any client</strong><span>The same account limits apply in Relay and other apps.</span></li></ol>
+            <p class="path-caption"><strong>Real node response, 21 October 2026:</strong> FID <code>3356280</code> reported <code>CASTS: used 4, limit 100</code>. That describes this account at this check; it is not a fixed quota for every user. Query your own FID for its current limits.</p>
+            <p class="note">AWS disk is a separate bill. Its job is to hold the node’s database. Increasing the server’s 2,000 GiB disk does not buy more cast allowance for your FID. Registering an app key is gasless; purchasing account storage is separate.</p>
+          </div>
+        </div>
+        <details class="concept-reference"><summary>Quick reference: FID, custody wallet, app key and storage</summary>
         <dl class="glossary">
           <div><dt>FID</dt><dd>Your permanent account number. Our disposable test account is <code>3356280</code>. A username is its readable name and can change.</dd></div>
           <div><dt>Custody wallet</dt><dd>The Ethereum account that controls your FID and approves app keys. Keep its secret separate from everyday posting.</dd></div>
@@ -175,6 +200,7 @@ cd farcaster-bounty</code></pre><button class="copy-button" data-copy="clone-com
           <div><dt>Storage rent</dt><dd>Pays for an FID’s allowance to keep social messages on the network. Casts, follows and reactions have separate limits. This is separate from the SSD you rent from AWS: a larger server disk gives your account no extra allowance.</dd></div>
           <div><dt>Message and confirmation</dt><dd>A message is a signed action such as a cast, like or follow. Confirmation means it has appeared in committed network state. A successful submission response is only the first step.</dd></div>
         </dl>
+        </details>
         <details><summary>What am I paying for with storage rent?</summary><p>Storage is allocated to your FID, so the same allowance applies whichever client you use. It is not a gas fee charged for every cast. Storage purchases use the protocol’s contracts on OP Mainnet; authorizing a gasless app key is a separate operation.</p><p>Before writing or buying more, check your FID with <code>GET /v1/storageLimitsByFid?fid=YOUR_FID</code> on your node. The response reports <code>used</code> and <code>limit</code> for each message type, plus storage-unit details. For example, spare cast allowance does not tell you how much follow allowance remains. Check the current purchase price and any expiry terms rather than relying on an old quota or price table. <a href="https://snapchain.farcaster.xyz/reference/httpapi/storagelimits" target="_blank" rel="noreferrer">Storage API reference</a>.</p></details>
         <details><summary>How does a gasless signer work?</summary><p>The custody wallet approves the key, its permitted actions, expiry window and nonce. A nonce is a sequence number that prevents an old authorization being reused. The requesting app also signs its identity. Relay submits <code>KEY_ADD</code> and checks the key is registered before using it.</p><p>In our flow, the user’s FID is also the requesting app FID. It is not a separate shared Relay app identity. Reloading the client forgets its in-memory key; revocation changes network permission. Imported keys retain their existing permissions and expiry.</p></details>
         <p><a href="https://snapchain.farcaster.xyz/guides/writing-messages" target="_blank" rel="noreferrer">Current account, signer and writing guide</a></p>

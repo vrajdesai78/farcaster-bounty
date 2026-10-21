@@ -48,8 +48,8 @@ function wireTabs(selector, select) {
   }
 }
 wireTabs('[data-mode]', tab => { mode = tab.dataset.mode; updateCommands(); });
-wireTabs('[data-path]', selected => {
-  for (const tab of document.querySelectorAll('[data-path]')) {
+for (const selector of ['[data-path]', '[data-concept]']) wireTabs(selector, selected => {
+  for (const tab of document.querySelectorAll(selector)) {
     const active = tab === selected;
     tab.setAttribute('aria-selected', String(active));
     tab.tabIndex = active ? 0 : -1;

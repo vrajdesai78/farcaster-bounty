@@ -77,12 +77,16 @@ main { min-width: 0; padding: 0 52px; }
 .mode-tabs button { min-height: 44px; padding: 10px 14px; font-size: 13px; border: 1px solid transparent; border-radius: 5px; color: #555d6e; background: transparent; }
 .mode-tabs button:hover { background: #f8f7fc; color: var(--ink); }
 .mode-tabs button[aria-selected="true"] { background: var(--soft); border-color: #d5cbed; color: #4f2ac2; font-weight: 500; }
-.network-path { display: flex; list-style: none; padding: 24px 0; margin: 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); gap: 22px; }
-.network-path li { flex: 1; position: relative; min-width: 0; padding-right: 4px; }
-.network-path li:not(:last-child)::after { content: '→'; position: absolute; top: 0; right: -15px; color: var(--accent); }
+.network-path { display: flex; list-style: none; padding: 0; margin: 0; gap: 28px; }
+.network-path li { flex: 1; position: relative; min-width: 0; padding: 18px; border: 1px solid #d5cbed; border-radius: 8px; background: var(--soft); }
+.network-path li:not(:last-child)::after { content: '→'; position: absolute; top: 20px; right: -21px; color: var(--accent); }
 .network-path.read-path li:not(:last-child)::after { content: '↔'; }
 .network-path strong { display: block; font-weight: 600; font-size: 14px; line-height: 1.5; }
 .network-path span { display: block; color: var(--muted); font-size: 12px; line-height: 1.7; margin-top: 8px; }
+.confirmation-flow { display: flex; flex-wrap: wrap; list-style: none; gap: 12px 28px; padding: 18px 0 0; margin: 18px 0 0; border-top: 1px solid var(--line); }
+.confirmation-flow li { position: relative; color: #464e60; font-size: 13px; line-height: 1.8; }
+.confirmation-flow li:not(:last-child)::after { content: "→"; position: absolute; right: -20px; color: var(--accent); }
+.concept-reference .glossary { margin-top: 24px; }
 .path-caption { font-size: 14px; line-height: 1.8; color: #555d6e; max-width: 74ch; margin: 18px 0 0; }
 .note { padding: 16px 18px; background: var(--soft); border-radius: 6px; font-size: 13px; line-height: 1.8; color: #46405b; }
 .full-section > p.note, .section-body > p.note { font-size: 13px; line-height: 1.8; max-width: none; color: #46405b; }
@@ -161,7 +165,7 @@ footer small { display: block; font-size: 11px; line-height: 1.8; color: var(--m
   .section-intro h2 { font-size: 28px; }
   .workbench { padding: 18px; }
   .network-path { gap: 18px; }
-  .network-path li:not(:last-child)::after { right: -12px; }
+  .network-path li:not(:last-child)::after { right: -15px; }
 }
 @media (max-width: 760px) {
   :root { scroll-padding-top: 84px; }
@@ -188,13 +192,15 @@ footer small { display: block; font-size: 11px; line-height: 1.8; color: var(--m
   .places { grid-template-columns: 1fr; gap: 24px; margin: 28px 0; }
   .places p { max-width: 65ch; }
   .path-explainer { margin-top: 28px; }
-  .network-path { flex-direction: column; padding: 20px 0; gap: 28px; }
-  .network-path li { display: grid; grid-template-columns: 1fr 1.2fr; gap: 16px; padding: 0; }
+  .network-path { flex-direction: column; padding: 0; gap: 28px; }
+  .network-path li { display: grid; grid-template-columns: 1fr 1.2fr; gap: 16px; padding: 16px; }
   .network-path span { margin-top: 0; }
-  .network-path li:not(:last-child)::after { content: '↓'; top: auto; bottom: -24px; left: 0; right: auto; }
+  .network-path li:not(:last-child)::after { content: '↓'; top: auto; bottom: -26px; left: 16px; right: auto; }
   .network-path.read-path li:not(:last-child)::after { content: '↕'; }
   .network-path strong { font-size: 14px; }
   .path-caption { font-size: 14px; }
+  .confirmation-flow { flex-direction: column; gap: 20px; }
+  .confirmation-flow li:not(:last-child)::after { content: "↓"; right: auto; left: 0; bottom: -20px; }
   .workbench { padding: 16px 14px; }
   .mode-tabs { gap: 3px; }
   .mode-tabs button { padding: 10px 11px; font-size: 12px; }
