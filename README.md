@@ -50,6 +50,12 @@ Import `vrajdesai78/farcaster-bounty` from GitHub and leave **Root Directory at 
 
 The public deployment contains only the tutorial and its assets. The React client and its local proxy still run on your computer; Vercel does not run the node, SSH tunnel, wallet session or client proxy. `.vercelignore` excludes private state and generated source archives from uploads.
 
+### Why the client needs a local proxy
+
+Run `./relay client` on your computer to start the client and local proxy at `http://127.0.0.1:5173/`. Browser requests go through that proxy and an SSH tunnel to your own node. A static deployment of `client/dist` does not start the proxy or tunnel, so hosting the interface alone will not make node reads or signed writes work.
+
+The Vercel project hosts the guide only. Keep its Root Directory at `.` so Vercel reads the root configuration and publishes `site/`; selecting `client/` bypasses that configuration. Never add your SSH private key, custody key or recovery phrase to Vercel environment variables to try to fix a missing local proxy.
+
 After deployment, check the homepage, fonts/screenshots, chapter links and command copying at the returned HTTPS URL. “Open local client” requires Relay running locally on port 5173. GitHub Pages remains an optional manual workflow, but the current GitHub plan does not support Pages for this private repository.
 
 Run checks:
