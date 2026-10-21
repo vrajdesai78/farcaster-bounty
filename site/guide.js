@@ -5,7 +5,7 @@ const isIPv4 = value => /^\d{1,3}(\.\d{1,3}){3}$/.test(value) && value.split('.'
 const publicIPv4 = () => $('#ssh-cidr').value.trim().replace(/\/32$/, '');
 
 function updateCommands() {
-  $('#command-status').textContent = 'Run these in the project folder on your computer.';
+  $('#command-status').textContent = 'Run these on your computer, inside the downloaded farcaster-bounty folder.';
   $('#command-status').classList.remove('error');
   const ip = publicIPv4();
   const host = $('#ssh-host').value.trim();
@@ -17,7 +17,7 @@ function updateCommands() {
   $('#dry-run-command').textContent = `${provision} --dry-run`;
   $('#first-step-title').textContent = mode === 'aws' ? 'Create the server' : 'Connect your server';
   $('#provision-description').textContent = mode === 'aws'
-    ? 'Creates the server in us-east-1 and saves its details in .relay-state/. AWS billing starts here. Wait for “Host ready”.'
+    ? 'Creates the server in us-east-1 and saves its details in .relay-state/. AWS billing starts here. Wait for “Host ready:” and for your terminal prompt to return.'
     : 'Saves your server and key path. Nothing is installed yet.';
   $('#node-description').textContent = mode === 'aws'
     ? 'Installs Docker, starts the node and begins the snapshot restore. After “Snapshot restore started”, you can install the client while the node restores in the background.'
@@ -91,7 +91,7 @@ for (const button of document.querySelectorAll('[data-copy]')) button.addEventLi
   try {
     await copyText(document.getElementById(id).textContent);
     announce(button.dataset.runOn === 'server' ? 'Command copied. Run it on your server over SSH.'
-      : ['clone-command', 'quickstart-clone-command'].includes(id) ? 'Commands copied. Run them on your computer, in the folder where you keep projects.'
+      : ['clone-command'].includes(id) ? 'Commands copied. Run them on your computer, in the folder where you keep projects.'
       : 'Command copied. Run it in the project folder.');
     $('#command-status').classList.remove('error');
   } catch (error) { announce(error.message); }

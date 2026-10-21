@@ -18,7 +18,7 @@ The AWS principal needs: `ec2:Describe*`, `ec2:ImportKeyPair`, `ec2:CreateSecuri
 
 ## Download and check the setup helper
 
-`./relay` is a Python script in this repository, not a preinstalled command. Request private repository access and authenticate Git with GitHub before cloning. In a terminal on your computer, check the required tools and AWS login:
+`./relay` is a Python script in this repository, not a preinstalled command. A repository is the collection of project files hosted on GitHub. Open the repository link and sign in; if it shows a 404 page, request access from the owner and accept the invitation before proceeding. You do not need to create your own repository. Authenticate Git with GitHub before cloning. In a terminal on your computer, check the required tools and AWS login:
 
 ```sh
 git --version
@@ -28,7 +28,14 @@ aws --version
 aws sts get-caller-identity
 ```
 
-The first four commands print versions; the last identifies the AWS account that will pay for the server. Resolve missing tools or login errors before proceeding. Then download the project:
+The first four commands print versions; the last identifies the AWS account that will pay for the server. Resolve missing tools or login errors before proceeding. For a browser-based GitHub login, install [GitHub CLI](https://cli.github.com/) and run the following in your local terminal. If Git already has access, skip these authentication commands:
+
+```sh
+gh auth login --hostname github.com --git-protocol https --web
+gh auth setup-git
+```
+
+Complete the browser authorization with the GitHub account that has repository access. Then download the project:
 
 ```sh
 git clone https://github.com/vrajdesai78/farcaster-bounty.git
