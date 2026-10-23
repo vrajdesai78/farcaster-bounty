@@ -114,3 +114,53 @@ function selectHosting(value) {
 }
 wireTabs('[data-hosting]', tab => selectHosting(tab.dataset.hosting));
 selectHosting(new URLSearchParams(location.search).get('hosting') === 'local' || location.hash.startsWith('#local-') ? 'local' : 'aws');
+
+// These are teaching sequences. They make no API calls and publish no messages.
+for (const demo of document.querySelectorAll('.flow-demo')) {
+  const steps = [...demo.querySelectorAll('.flow-step')];
+  const notes = [...demo.querySelectorAll('[data-flow-note]')];
+  const play = demo.querySelector('[data-flow-play]');
+  const progress = demo.querySelector('.flow-progress');
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+  let index = 0;
+  let timer;
+  function stop() {
+    clearTimeout(timer);
+    timer = undefined;
+    demo.classList.remove('is-playing');
+    play.textContent = 'Play example';
+    play.setAttribute('aria-pressed', 'false');
+  }
+  function show(next) {
+    index = next;
+    steps.forEach((step, i) => {
+      if (i === index) step.setAttribute('aria-current', 'step');
+      else step.removeAttribute('aria-current');
+    });
+    notes.forEach((note, i) => { note.hidden = i !== index; });
+    progress.textContent = `Step ${index + 1} of ${steps.length}`;
+  }
+  function advance() {
+    if (index === steps.length - 1) { stop(); return; }
+    show(index + 1);
+    if (index === steps.length - 1) stop();
+    else timer = setTimeout(advance, 5000);
+  }
+  play.addEventListener('click', () => {
+    if (timer) { stop(); return; }
+    if (index === steps.length - 1) show(0);
+    demo.classList.add('is-playing');
+    play.textContent = 'Pause example';
+    play.setAttribute('aria-pressed', 'true');
+    timer = setTimeout(advance, 5000);
+  });
+  demo.querySelector('[data-flow-next]').addEventListener('click', () => { stop(); show((index + 1) % steps.length); });
+  steps.forEach((step, i) => step.querySelector('button').addEventListener('click', () => { stop(); show(i); }));
+  // Pause instead of letting an unseen sequence advance while the reader is elsewhere.
+  const observer = new IntersectionObserver(entries => { if (!entries[0].isIntersecting) stop(); });
+  observer.observe(demo);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) stop(); });
+  reduced.addEventListener('change', stop);
+  play.setAttribute('aria-pressed', 'false');
+  demo.querySelector('.flow-controls').hidden = false;
+}

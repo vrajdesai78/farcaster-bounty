@@ -24,7 +24,7 @@ def candidates():
         if path.name in {'.npmrc','id_ed25519','id_rsa'} or path.suffix in {'.pem','.key'}: continue
         if path.name.startswith('.env') and path.name!='.env.example': continue
         if path.suffix in {'.zip','.tgz','.pyc','.tsbuildinfo'} or path.name=='.DS_Store': continue
-        allowed=relative in FILES or relative in DOCS or relative in SCRIPTS or relative.startswith(TREES) or relative.startswith('scripts/diagrams/')
+        allowed=relative in FILES or relative in DOCS or relative in SCRIPTS or relative.startswith(TREES)
         if not allowed: continue
         if path.is_symlink(): raise RuntimeError('Public package refuses symlink: '+relative)
         if path.is_file(): yield path,relative

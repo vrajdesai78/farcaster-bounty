@@ -1,1 +1,0 @@
-{"name":"farcaster-guide-diagrams","private":true,"type":"module","scripts":{"render":"node render.mjs"},"devDependencies":{"mermaid":"12.2.0"}}
