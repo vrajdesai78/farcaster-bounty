@@ -74,7 +74,7 @@ export async function registerSigner(fid: number, phrase?: string): Promise<Sess
   if (phrase) { const account = mnemonicToAccount(phrase.trim().toLowerCase().replace(/\s+/g,' ')); address = account.address; custody = new ViemLocalEip712Signer(account); }
   else {
     const provider = (window as unknown as {ethereum?: Parameters<typeof custom>[0]}).ethereum;
-    if (!provider) throw new Error('No browser wallet found. Use a wallet extension holding the test FID custody account, or the test-account recovery option.');
+    if (!provider) throw new Error('No browser wallet found. Open this client in a browser with a wallet extension holding this FID’s custody account.');
     const wallet = createWalletClient({ transport: custom(provider) });
     const [account] = await wallet.requestAddresses();
     address = account;
