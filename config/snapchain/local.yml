@@ -1,0 +1,11 @@
+# Docker Compose 2.24.4+; override rather than append public API mappings.
+services:
+  snapchain:
+    ports: !override
+      - "127.0.0.1:3381:3381/tcp"
+      - "127.0.0.1:3383:3383/tcp"
+      - "3382:3382/udp"
+  statsd:
+    ports: !override
+      - "127.0.0.1:8125:8125/udp"
+      - "127.0.0.1:8126:8126/tcp"

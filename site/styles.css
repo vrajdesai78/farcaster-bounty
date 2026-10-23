@@ -114,3 +114,5 @@ footer small { display: block; font-size: 12px; line-height: 1.7; }
 }
 @media (max-width: 360px) { main { padding-inline: 16px; } .topbar { padding-inline: 16px; } .topbar nav { gap: 12px; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; } }
+.hosting-choice{margin-top:56px;padding-top:28px;border-top:1px solid var(--line)}
+.hosting-choice h3{font-size:22px;margin:0 0 16px}.hosting-choice .mode-tabs button{font-size:15px}

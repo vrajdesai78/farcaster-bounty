@@ -2,7 +2,7 @@ flowchart LR
 accTitle: How a new node catches up
 accDescr: A saved snapshot is downloaded and restored onto the server disk. The node applies blocks made after the snapshot, then keeps applying new committed blocks.
 snapshot[("Saved snapshot")]:::network
-subgraph S["Your AWS server · first setup"]
+subgraph S["Your node host · first setup"]
  download["Download"]:::service
  restore["Restore database"]:::service
  catchup["Catch up"]:::service

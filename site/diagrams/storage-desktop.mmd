@@ -1,6 +1,6 @@
 flowchart LR
 accTitle: Account storage and server disk are separate
-accDescr: Protocol storage rent increases an FID’s message allowance, shared by its clients. AWS disk holds the node’s copy of network state. These are separate purchases; increasing server disk does not increase account allowance.
+accDescr: Protocol storage rent increases an FID’s message allowance, shared by its clients. Host disk holds the node’s copy of network state. These are separate purchases; increasing server disk does not increase account allowance.
 subgraph A["Account storage · follows your FID"]
  rent["Pay protocol storage rent"]:::device
  limits["Cast / follow / reaction limits"]:::service
@@ -8,7 +8,7 @@ subgraph A["Account storage · follows your FID"]
  rent --> limits --> apps
 end
 subgraph D["Server disk · belongs to your server"]
- aws["Pay AWS for SSD capacity"]:::network
+ aws["Provide SSD capacity"]:::network
  disk[("Node database on disk")]:::data
  state["Store your copy of network state"]:::service
  aws --> disk --> state

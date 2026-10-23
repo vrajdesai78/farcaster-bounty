@@ -4,7 +4,7 @@ accDescr: An app key signs a cast in the browser. Signed bytes go through the cl
 box rgb(248,245,255) Your browser
 participant B as Browser
 end
-box rgb(239,248,244) Your AWS server
+box rgb(239,248,244) Your node host
 participant C as Client service
 participant S as Read node
 end
@@ -12,7 +12,7 @@ box rgb(255,249,238) Farcaster network
 participant V as Validators
 end
 Note over B: App key signs the cast.<br/>Private key stays here.
-B->>C: 1 · Signed cast over HTTPS
+B->>C: 1 · Signed cast over HTTP(S)
 C->>S: 2 · Submit signed bytes
 S->>V: 3 · Forward message
 V-->>S: 4 · Committed block

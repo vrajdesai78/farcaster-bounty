@@ -91,9 +91,26 @@ for (const button of document.querySelectorAll('[data-copy]')) button.addEventLi
   try {
     await copyText(document.getElementById(id).textContent);
     announce(button.dataset.runOn === 'server' ? 'Command copied. Run it on your server over SSH.'
-      : ['clone-command'].includes(id) ? 'Commands copied. Run them on your computer, in the folder where you keep projects.'
+      : ['clone-command', 'local-clone-command'].includes(id) ? 'Commands copied. Run them on your computer, in the folder where you keep projects.'
       : 'Command copied. Run it in the project folder.');
     $('#command-status').classList.remove('error');
   } catch (error) { announce(error.message); }
 });
 updateCommands();
+
+let hosting = 'aws';
+function selectHosting(value) {
+  hosting = value;
+  const url = new URL(location.href);url.searchParams.set('hosting',hosting);history.replaceState(null,'',url);
+  for (const tab of document.querySelectorAll('[data-hosting]')) {
+    const active = tab.dataset.hosting === hosting;
+    tab.setAttribute('aria-selected', String(active));
+    tab.tabIndex = active ? 0 : -1;
+    document.getElementById(tab.getAttribute('aria-controls')).hidden = !active;
+  }
+  for (const element of document.querySelectorAll('[data-hosting-only]')) element.hidden = element.dataset.hostingOnly !== hosting;
+  for (const link of document.querySelectorAll('[data-setup-jump]')) link.href = hosting === 'local' ? '#local-setup' : '#prerequisites';
+  $('#hosting-status').textContent = hosting === 'local' ? 'Your computer: node and client run locally. No AWS account or cloud server.' : 'AWS: both services run on the rented server.';
+}
+wireTabs('[data-hosting]', tab => selectHosting(tab.dataset.hosting));
+selectHosting(new URLSearchParams(location.search).get('hosting') === 'local' || location.hash.startsWith('#local-') ? 'local' : 'aws');

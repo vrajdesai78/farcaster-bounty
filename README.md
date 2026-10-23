@@ -81,3 +81,19 @@ Project code: [MIT](LICENSE). Bundled upstream Snapchain configuration and fonts
 Open the HTTPS client address printed by `./relay client`, sign in if the deployment requires a login, then choose **Install app**. On iPhone/iPad, open that address in Safari and choose **Share → Add to Home Screen**. The node stays on EC2; the installed app is its browser client. `./relay client --public` removes the website login; `--private` restores it. Keep raw node APIs restricted by the firewall when using public mode. Conversations and profiles have shareable hash routes. Drafts last for the current page session.
 
 The service worker provides a connection-error screen without caching account data, authenticated pages, API responses or signing keys. Reconnect a signer after closing/reloading the app. Browser-wallet availability depends on the mobile browser or wallet; home-screen installation does not supply an Ethereum wallet. Real-device installation and wallet-extension support must be tested separately from automated browser checks.
+
+## Run both services locally, without AWS
+
+Use the guide’s **On your computer · No AWS** tab. The local path needs Linux x86_64 Docker, Compose 2.24.4+, at least 4 Docker CPUs, 16 GB Docker RAM and 2 TB free SSD space, plus Python 3.9+ and Node.js 22.12+. Check Docker Desktop/WSL VM allocation and physical free space separately. ARM/Apple Silicon and restrictive home-network operation are not validated by this path.
+
+After cloning and entering the project folder:
+
+```sh
+python3 scripts/local-node.py prepare
+python3 scripts/local-node.py start
+python3 scripts/local-node.py client
+```
+
+Open http://127.0.0.1:5173/ on that computer. The local client talks directly to local port3381. No AWS account, AWS CLI or SSH tunnel is used. `python3 scripts/local-node.py status` checks two samples and a real read; `logs` inspects bounded logs, and `stop` stops the project containers while retaining data. Configuration/data stay in ignored `.relay-private/local-node`. The pinned node and local port overrides have been configuration-tested, not fully restored/synced on fresh local hardware.
+
+This differs from `./relay client --local`, which remains a local client for a remote node. The AWS tab runs both node and client on AWS and provides the hosted HTTPS/PWA address.

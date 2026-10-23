@@ -18,6 +18,7 @@ jobs:
           cache: npm
           cache-dependency-path: client/package-lock.json
       - run: docker compose -f config/snapchain/compose.yml config --quiet
+      - run: docker compose -f config/snapchain/compose.yml -f config/snapchain/local.yml config --quiet
       - run: RELAY_DOMAIN=example.test RELAY_LOGIN_HASH=fixture RELAY_CONFIG_SHA=fixture docker compose -f config/client/compose.yml config --quiet
       - run: python3 -m unittest discover -s tests -v
       - run: npm ci && npm test && npm run build

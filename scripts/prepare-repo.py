@@ -11,7 +11,7 @@ ROOT=Path(__file__).resolve().parents[1]
 FILES={'relay','README.md','SETUP.md','LICENSE','SECURITY.md','CONTRIBUTING.md','NOTICE.md','.gitignore','vercel.json','.vercelignore'}
 TREES=('client/','config/','site/','tests/','.github/','docs/public/')
 DOCS={'docs/CURRENT-DOCS-REVIEW.md','docs/LIVE-CLIENT-VERIFICATION.md'}
-SCRIPTS={'scripts/prepare-repo.py','scripts/serve-site.py','scripts/tunnel.sh'}
+SCRIPTS={'scripts/prepare-repo.py','scripts/serve-site.py','scripts/tunnel.sh','scripts/local-node.py'}
 DENIED={'node_modules','dist','__pycache__','.relay-state','.relay-private','.snapchain-aws','.git','test-results','playwright-report','.vite','.impeccable','.agents','.codex','.aws'}
 PATTERNS=[('private-key',re.compile(r'-----BEGIN (?:OPENSSH |RSA |EC )?PRIVATE KEY-----')),
  ('aws-access-key',re.compile(r'\b(?:AKIA|ASIA)[A-Z0-9]{16}\b')),
