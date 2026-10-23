@@ -42,7 +42,7 @@ Read [SETUP.md](SETUP.md). Preview the static microsite locally:
 python3 scripts/serve-site.py
 ```
 
-Open **http://127.0.0.1:4173/**. The guide contains no wallet/key entry form and makes no social API calls. `site/` is a buildless static site; it can be hosted separately from the local client. The repository is private; the hosted guide offers no source-code download. Collaborators need repository access to run the setup.
+Open **http://127.0.0.1:4173/**. The guide contains no wallet/key entry form and makes no social API calls. `site/` is a buildless static site; it can be hosted separately from the local client. The source is public and MIT licensed. Anyone can clone it without a GitHub account or invitation.
 
 ### Deploy the guide on Vercel
 
@@ -56,7 +56,7 @@ The public deployment contains only the tutorial and its assets. The production 
 
 For development, `./relay client --local` retains the original local proxy and SSH tunnel at `http://127.0.0.1:5173/`. This optional mode needs local Node.js and a running terminal. A static upload of `client/dist` to Vercel supplies neither hosted backend nor local connection. Keep the guide project’s Root Directory at `.`.
 
-After deployment, check the homepage, fonts/screenshots, chapter links and command copying at the returned HTTPS URL. The guide explains how to open the client URL printed by the installer. GitHub Pages remains an optional manual workflow, but the current GitHub plan does not support Pages for this private repository.
+After deployment, check the homepage, fonts/screenshots, chapter links and command copying at the returned HTTPS URL. The guide explains how to open the client URL printed by the installer. GitHub Pages remains an optional manual workflow.
 
 Run checks:
 

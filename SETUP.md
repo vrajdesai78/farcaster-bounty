@@ -18,7 +18,7 @@ The AWS principal needs: `ec2:Describe*`, `ec2:ImportKeyPair`, `ec2:CreateSecuri
 
 ## Download and check the setup helper
 
-`./relay` is a Python script in this repository, not a preinstalled command. A repository is the collection of project files hosted on GitHub. Open the repository link and sign in; if it shows a 404 page, request access from the owner and accept the invitation before proceeding. You do not need to create your own repository. Authenticate Git with GitHub before cloning. In a terminal on your computer, check the required tools and AWS login:
+`./relay` is a Python script in this repository, not a preinstalled command. A repository is the collection of project files hosted on GitHub. These files are public and MIT licensed; you do not need a GitHub account, invitation or command-line GitHub login to download them. You do not need to create your own repository. In a terminal on your computer, check the required tools and AWS login:
 
 ```sh
 git --version
@@ -28,14 +28,7 @@ aws --version
 aws sts get-caller-identity
 ```
 
-The first four commands print versions; the last identifies the AWS account that will pay for the server. Resolve missing tools or login errors before proceeding. For a browser-based GitHub login, install [GitHub CLI](https://cli.github.com/) and run the following in your local terminal. If Git already has access, skip these authentication commands:
-
-```sh
-gh auth login --hostname github.com --git-protocol https --web
-gh auth setup-git
-```
-
-Complete the browser authorization with the GitHub account that has repository access. Then download the project:
+The first four commands print versions; the last identifies the AWS account that will pay for the server. Resolve missing tools or login errors before proceeding. Download the project:
 
 ```sh
 git clone https://github.com/vrajdesai78/farcaster-bounty.git
@@ -43,7 +36,7 @@ cd farcaster-bounty
 ./relay --help
 ```
 
-`git clone` downloads the project, `cd` enters its folder, and `./relay --help` lists the helper's commands without creating resources. Expect output starting with `usage: relay`. If cloning reports “Repository not found”, check access and GitHub authentication. If you already cloned it, use that existing folder. Run every later command there and keep `.relay-state` for retries and cleanup. The hosted guide does not offer a public source download.
+`git clone` downloads the project, `cd` enters its folder, and `./relay --help` lists the helper's commands without creating resources. Expect output starting with `usage: relay`. If cloning fails, check the URL and your network connection. If you already cloned it, use that existing folder. Run every later command there and keep `.relay-state` for retries and cleanup. The public source is available at https://github.com/vrajdesai78/farcaster-bounty under the MIT license.
 
 ## 1. Provision compute
 
