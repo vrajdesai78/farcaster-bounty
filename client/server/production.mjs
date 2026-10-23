@@ -4,8 +4,8 @@ import { readFile, stat } from 'node:fs/promises';
 import { resolve, extname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const endpoints = new Set(['info','events','storageLimitsByFid','castsByFid','castsByParent','userDataByFid','linksByFid','linkById','reactionsByFid','reactionsByCast','signer','signersByFid','onChainIdRegistryEventByAddress','submitMessage','validateMessage']);
-const mime = {'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.woff2':'font/woff2'};
+const endpoints = new Set(['info','events','storageLimitsByFid','castsByFid','castById','castsByParent','userDataByFid','linksByFid','linkById','reactionsByFid','reactionsByCast','signer','signersByFid','onChainIdRegistryEventByAddress','submitMessage','validateMessage']);
+const mime = {'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.woff2':'font/woff2','.webmanifest':'application/manifest+json'};
 const security = {
   'X-Content-Type-Options':'nosniff', 'Referrer-Policy':'no-referrer', 'X-Frame-Options':'DENY',
   'Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https: wss:; font-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
@@ -47,7 +47,8 @@ export function createRelayServer(options) {
       let decoded='';
       if(auth.startsWith('Basic ') && auth.length<1024) decoded=Buffer.from(auth.slice(6),'base64').toString('utf8');
       const provided=createHash('sha256').update(decoded).digest();
-      if(!timingSafeEqual(provided,expected)) return json(res,401,{error:'Sign in with the generated client login.'},{'WWW-Authenticate':'Basic realm="Farcaster client", charset="UTF-8"'});
+      const publicInstallAsset=['/manifest.webmanifest','/sw.js','/assets/app-192.png','/assets/app-512.png'].includes(new URL(req.url,origin).pathname);
+      if(!publicInstallAsset && !timingSafeEqual(provided,expected)) return json(res,401,{error:'Sign in with the generated client login.'},{'WWW-Authenticate':'Basic realm="Farcaster client", charset="UTF-8"'});
       const url=new URL(req.url,origin);
       if(req.url.length>8192) return json(res,414,{error:'Request URL too long.'});
       if(url.pathname==='/healthz') return json(res,200,{status:'ok'});
@@ -59,7 +60,7 @@ export function createRelayServer(options) {
       if(!url.pathname.startsWith('/api/node/')) {
         if(!['GET','HEAD'].includes(req.method)) return json(res,405,{error:'Method not allowed.'});
         const path=decodeURIComponent(url.pathname);
-        if(path!=='/' && path!=='/favicon.svg' && !path.startsWith('/assets/')) return json(res,404,{error:'Not found.'});
+        if(path!=='/' && path!=='/favicon.svg' && path!=='/manifest.webmanifest' && path!=='/sw.js' && !path.startsWith('/assets/')) return json(res,404,{error:'Not found.'});
         const relative=path==='/'?'index.html':path.slice(1);
         if(relative.split('/').some(part=>part.startsWith('.'))) return json(res,404,{error:'Not found.'});
         const file=resolve(directory,relative);

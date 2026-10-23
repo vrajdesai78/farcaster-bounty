@@ -62,3 +62,15 @@ export function lookupSigner(fid: number, signer: string) {
   return signerCache.get(key)!;
 }
 export function safeUrl(value: string) { try { const u=new URL(value); return ['http:','https:'].includes(u.protocol) ? u.href : undefined; } catch { return undefined; } }
+
+export function validCastHash(hash: string): string {
+  if (!/^0x[0-9a-f]{40}$/i.test(hash)) throw new Error('Invalid cast address.');
+  return hash;
+}
+export async function loadCast(fid: number, hash: string, signal?: AbortSignal) {
+  return nodeGet<Cast>('castById', {fid: validFid(fid), hash: validCastHash(hash)}, signal);
+}
+export async function loadReplies(fid: number, hash: string, token = '', signal?: AbortSignal) {
+  const page = await nodeGet<Page<Cast>>('castsByParent', {fid: validFid(fid), hash: validCastHash(hash), pageSize:30, ...(token && {pageToken:token})}, signal);
+  return {casts:mergeCasts(page.messages || []).reverse(), next:page.nextPageToken || ''};
+}

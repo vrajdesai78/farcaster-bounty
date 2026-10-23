@@ -4,7 +4,7 @@ import '../src/sdk-compat';
 import { Message, MessageType, NobleEd25519Signer, ed25519 } from '@farcaster/core';
 import { toHex, encodeAbiParameters } from 'viem';
 import { castMessage, reactionMessage, followMessage, registerSigner, appFid, submit, revokeSigner } from '../src/signing';
-import { filterCasts, loadFeed, mergeCasts, safeUrl, validFid, nodeGet, NodeError } from '../src/api';
+import { filterCasts, loadFeed, mergeCasts, safeUrl, validFid, nodeGet, NodeError, loadCast, loadReplies } from '../src/api';
 import type { Cast, Session } from '../src/types';
 
 const key = crypto.getRandomValues(new Uint8Array(32));
@@ -142,4 +142,10 @@ test('real API-shaped self-revocation uses array requester nonce and verifies di
 test('plain-text API validation errors remain readable',async()=>{
   const previous=globalThis.fetch;globalThis.fetch=async()=>new Response('Invalid query parameters: expected a sequence',{status:400});
   try{await assert.rejects(nodeGet('signersByFid'),/expected a sequence/);}finally{globalThis.fetch=previous;}
+});
+
+test('conversation reads validate targets and preserve oldest-first reply pagination',async()=>{
+ const previous=globalThis.fetch;const hash='0x'+'ab'.repeat(20);let calls=0;
+ globalThis.fetch=async(input)=>{calls++;const url=new URL(String(input),'http://localhost');assert.equal(url.searchParams.get('fid'),'2');assert.equal(url.searchParams.get('hash'),hash);return url.pathname.endsWith('castById')?Response.json(cast(2,3,hash)):Response.json({messages:[cast(3,8,'b'),cast(2,3,'a')],nextPageToken:'next'});};
+ try{await assert.rejects(loadCast(2,'invalid'));assert.equal(calls,0);assert.equal((await loadCast(2,hash)).hash,hash);const replies=await loadReplies(2,hash);assert.deepEqual(replies.casts.map(c=>c.hash),['a','b']);assert.equal(replies.next,'next');}finally{globalThis.fetch=previous}
 });

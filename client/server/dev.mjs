@@ -5,7 +5,7 @@ import { createServer as createViteServer } from 'vite';
 const target = new URL(process.env.SNAPCHAIN_URL || 'http://127.0.0.1:13381');
 if (!['http:', 'https:'].includes(target.protocol) || target.username || target.password) throw new Error('Use an HTTP(S) SNAPCHAIN_URL without embedded credentials.');
 const port = Number(process.env.PORT || 5173);
-const allowed = new Set(['info','events','storageLimitsByFid','castsByFid','castsByParent','userDataByFid','linksByFid','linkById','reactionsByFid','reactionsByCast','signer','signersByFid','onChainIdRegistryEventByAddress','submitMessage','validateMessage']);
+const allowed = new Set(['info','events','storageLimitsByFid','castsByFid','castById','castsByParent','userDataByFid','linksByFid','linkById','reactionsByFid','reactionsByCast','signer','signersByFid','onChainIdRegistryEventByAddress','submitMessage','validateMessage']);
 const vite = await createViteServer({ server: { middlewareMode: true, ws: {port: port + 20000} }, optimizeDeps: {include: ['@farcaster/core', 'buffer/index.js', 'viem', 'viem/accounts']}, appType: 'spa' });
 const json = (res, status, data) => { res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(data)); };
 const server = http.createServer(async (req, res) => {

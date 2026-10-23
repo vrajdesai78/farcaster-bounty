@@ -96,7 +96,7 @@ Never infer a stall just because tar extraction is quiet. Check actual progress/
 
 This builds the browser client and installs a small production service beside Snapchain in `/opt/relay-client`. Caddy provides HTTPS and renews certificates. The installer starts only these client services; it leaves Snapchain and its database running. The browser signs social messages and sends them through HTTPS. The client service reaches the node at `127.0.0.1:3381` on the same server.
 
-The command prints an HTTPS URL after checking it with normal certificate verification. Open that URL in a browser on your computer or phone. No local proxy, Node.js process or SSH tunnel needs to stay running.
+The command prints an HTTPS URL after checking it with normal certificate verification. Open that URL in a browser on your computer or phone. Choose **Install app** to add it to your home screen where supported; on iPhone/iPad use Safari → Share → Add to Home Screen. The installed client uses this same server and login. No local proxy, Node.js process or SSH tunnel needs to stay running. Signing keys remain in memory, so reconnect after closing/reloading the app. Installation does not add a mobile wallet provider.
 
 A purchased domain is optional. By default the helper uses `relay-SERVER-IP.sslip.io`; sslip.io resolves the embedded public IP without DNS-account setup. It is a public DNS dependency, and certificate-authority availability/rate limits apply. The URL contains your public server IP. If that IP changes, the hostname and deployment configuration need updating. For a custom domain, point its A record directly to the server first (DNS proxy disabled), then run:
 

@@ -13,6 +13,8 @@ async function fixture(t:any,extra={}) {
   const directory=await mkdtemp(join(tmpdir(),'relay-hosted-'));
   await mkdir(join(directory,'assets'));
   await writeFile(join(directory,'index.html'),'<h1>Relay fixture</h1>');
+  await writeFile(join(directory,'manifest.webmanifest'),JSON.stringify({name:'Farcaster client'}));
+  await writeFile(join(directory,'sw.js'),'self.addEventListener("fetch",()=>{});');
   await writeFile(join(directory,'assets','app.js'),'console.log("fixture");');
   const seen:any[]=[];
   const upstream=http.createServer(async(req,res)=>{
@@ -85,4 +87,24 @@ test('private files, directories and oversized API pages are not served',async t
 test('hosted service rejects insecure origins and missing login at startup',()=>{
   assert.throws(()=>createRelayServer({origin:'http://relay.test',loginHash:'a'.repeat(64)}),/HTTPS/);
   assert.throws(()=>createRelayServer({origin,loginHash:''}),/LOGIN_HASH/);
+});
+
+test('installation metadata is public but HTML and social data stay authenticated',async t=>{
+  const {request,seen}=await fixture(t);
+  for(const path of ['/manifest.webmanifest','/sw.js']){
+    const response=await request(path,{headers:{Authorization:''}});
+    assert.equal(response.status,200);
+    assert.equal(response.headers.get('cache-control'),'no-store');
+  }
+  assert.match((await request('/manifest.webmanifest',{headers:{Authorization:''}})).headers.get('content-type')!,/manifest/);
+  assert.equal((await request('/',{headers:{Authorization:''}})).status,401);
+  assert.equal((await request('/api/node/castById?fid=2&hash=0xabc',{headers:{Authorization:''}})).status,401);
+  assert.equal(seen.length,0);
+});
+test('conversation requests use only the configured node',async t=>{
+  const {request,seen}=await fixture(t);
+  const hash='0x'+'ab'.repeat(20);
+  assert.equal((await request('/api/node/castById?fid=2&hash='+hash)).status,200);
+  assert.equal(seen[0].url,'/v1/castById?fid=2&hash='+hash);
+  assert.equal(seen[0].authorization,undefined);
 });
