@@ -27,12 +27,12 @@ The node step checks the adopted deployment without replacing or restarting it. 
 ## What works
 
 - Real profile/cast reads, bounded chronological following feeds and pagination.
-- Gasless scoped signer registration; browser-wallet, existing Ed25519 signer and disposable test-recovery paths.
+- Existing-account detection through a browser wallet, optional browser-only English recovery-phrase import, and new-account onboarding with OP Mainnet funding and explicit paid registration. Every account then uses a newly authorized gasless scoped app key.
 - Casts/replies, likes/recasts and removal, follows/unfollows, app-FID include/exclude filters.
 - Confirmation through message-shard events for social messages and signer-state reads for key changes.
 - Session-only signing material, local forgetting, self-revocation, and rejection of inactive keys.
 
-The original local client and real mainnet actions were verified on 20 October 2026. The hosted HTTPS client repeated the core flows on 21 October; see [hosted verification](docs/public/HOSTED-CLIENT-VERIFICATION.md). See [sanitized evidence](docs/LIVE-CLIENT-VERIFICATION.md) and [remaining verification limits](docs/public/READINESS.md). A separate fresh-session test passed all three commands on a new AWS server on 21 October, without installation fixes. Its snapshot restore, full-sync check and social-action checks are still in progress. This is not a completed bounty submission.
+The original local client and real mainnet actions were verified on 20 October 2026. The hosted HTTPS client repeated the core flows on 21 October; see [hosted verification](docs/public/HOSTED-CLIENT-VERIFICATION.md). See [sanitized evidence](docs/LIVE-CLIENT-VERIFICATION.md) and [remaining verification limits](docs/public/READINESS.md). A separate fresh-session test passed all three commands on a new AWS server on 21 October, without installation fixes. That test server was deleted before full sync and social-action acceptance; the later retry was cancelled and cleaned up before installation. Fresh full-sync acceptance remains unverified.
 
 ## Guide and development
 

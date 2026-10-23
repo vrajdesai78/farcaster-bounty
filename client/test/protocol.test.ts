@@ -149,3 +149,6 @@ test('conversation reads validate targets and preserve oldest-first reply pagina
  globalThis.fetch=async(input)=>{calls++;const url=new URL(String(input),'http://localhost');assert.equal(url.searchParams.get('fid'),'2');assert.equal(url.searchParams.get('hash'),hash);return url.pathname.endsWith('castById')?Response.json(cast(2,3,hash)):Response.json({messages:[cast(3,8,'b'),cast(2,3,'a')],nextPageToken:'next'});};
  try{await assert.rejects(loadCast(2,'invalid'));assert.equal(calls,0);assert.equal((await loadCast(2,hash)).hash,hash);const replies=await loadReplies(2,hash);assert.deepEqual(replies.casts.map(c=>c.hash),['a','b']);assert.equal(replies.next,'next');}finally{globalThis.fetch=previous}
 });
+
+
+test('wallet mismatch stops gasless authorization before contacting the node',async()=>{const previous=globalThis.fetch;let calls=0;globalThis.fetch=async()=>{calls++;throw new Error('must not fetch');};try{const phrase=Array(11).fill('abandon').concat('about').join(' ');await assert.rejects(registerSigner(123,phrase,'0x1111111111111111111111111111111111111111'),/wallet changed/);assert.equal(calls,0);}finally{globalThis.fetch=previous;}});

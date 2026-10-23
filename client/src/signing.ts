@@ -67,7 +67,7 @@ export async function submit(result: HubAsyncResult<Message> | Message, options:
   }
   throw new Error(`Confirmation pending for ${hash}. Your node accepted the message, but inclusion was not observed. Check the node before trying again.`);
 }
-export async function registerSigner(fid: number, phrase?: string): Promise<Session> {
+export async function registerSigner(fid: number, phrase?: string, expectedAddress?: string): Promise<Session> {
   validFid(fid);
   let custody: Eip712Signer;
   let address: string;
@@ -80,6 +80,7 @@ export async function registerSigner(fid: number, phrase?: string): Promise<Sess
     address = account;
     custody = new ViemWalletEip712Signer(createWalletClient({account, transport: custom(provider)}));
   }
+  if(expectedAddress && address.toLowerCase()!==expectedAddress.toLowerCase()) throw new Error('The wallet changed. Connect your account again.');
   const event = await nodeGet<{fid: number}>('onChainIdRegistryEventByAddress', {address});
   if (event.fid !== fid) throw new Error(`That wallet controls FID ${event.fid}, not ${fid}. Choose its custody wallet.`);
   const storage = await nodeGet<{limits: {name: string; limit: number}[]}>('storageLimitsByFid', {fid});

@@ -18,3 +18,23 @@ select{font:inherit;border:1px solid #dadce7;border-radius:8px;padding:10px;back
 .install-app{margin:0 0 24px}.install-app>.secondary{width:100%;justify-content:flex-start}.install-help{padding:16px 0;font-size:13px;line-height:1.7}.install-help>.icon-button{float:right}.install-help p{margin:10px 0}.mobile-install{display:none}
 @media(max-width:1100px){.mobile-install{display:block;margin-top:16px}.mobile-install .install-app{margin-bottom:8px}.mobile-install .install-app>.secondary{width:auto}}
 @media(max-width:650px){.cast{gap:12px;padding-block:22px}.cast-text{font-size:16px;line-height:1.65}.cast-meta .name{font-size:14px}.cast-actions button{min-height:44px;font-size:12px}.cast-meta time{font-size:12px}.cast-actions{justify-content:space-between;gap:8px}.fine-print,.feed-note{font-size:12px}.app-shell{padding-bottom:calc(85px + env(safe-area-inset-bottom))}.sidebar{height:calc(65px + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom)}.mobile-account{bottom:calc(65px + env(safe-area-inset-bottom))}.app-shell:has(.mobile-account){padding-bottom:calc(135px + env(safe-area-inset-bottom))}.composer-footer .fine-print{max-width:55%}}
+/* Account setup stays within the existing client dialog, including small phones. */
+.onboarding { width: 520px; }
+.onboarding p { font-size: 14px; line-height: 1.65; color: #53596d; }
+.onboarding .fine-print { font-size: 12px; line-height: 1.65; color: #53596d; }
+.onboarding .error { color: #b02d4b; overflow-wrap: anywhere; }
+.onboarding .primary,.onboarding .secondary { min-height: 46px; white-space: normal; }
+.account-choices { display: flex; flex-direction: column; gap: 12px; margin: 24px 0; }
+.onboarding-back { margin-top: 16px; min-height: 36px; }
+.phrase-option { display: flex; margin: 16px auto 0; min-height: 44px; text-align: center; }
+.account-summary { margin: 20px 0; padding-block: 16px; border-block: 1px solid var(--line); }
+.wallet-address { display: block; font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; margin: 8px 0; user-select: all; }
+.onboarding .detected-fid { margin-bottom: 0; font-size: 20px; font-weight: 600; color: #34235c; }
+.onboarding label.check-label { display: flex; flex-direction: row; align-items: flex-start; gap: 10px; font-size: 13px; line-height: 1.6; }
+.onboarding .check-label input { width: 18px; height: 18px; flex: 0 0 18px; margin: 2px 0; accent-color: var(--accent); }
+.registration-cost { margin: 20px 0; font-size: 13px; }
+.registration-cost > div { display: flex; flex-wrap: wrap; gap: 4px 16px; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.registration-cost dt { color: #53596d; }
+.registration-cost dd { margin: 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.onboarding input[type="password"] { letter-spacing: .12em; }
+@media(max-width:650px) { .onboarding { max-height: 92dvh; padding: 20px; }.onboarding h2 { font-size: 24px; }.onboarding .fine-print { font-size: 12px; } }
