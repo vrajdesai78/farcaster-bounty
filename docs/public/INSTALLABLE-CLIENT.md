@@ -33,3 +33,13 @@ Public evidence:
 - Key removal: `0x63add746593f17e6119e6ca08b4573da96d8730b`
 
 The test key was revoked; reactions and the follow were reversed. Clearly labelled casts/replies remain public. No new EC2 instance or paid account registration was used. This remains separate from the incomplete fresh-server test.
+
+## Public deployment security check — 23 October
+
+The existing server was switched to explicit public-client mode. Anonymous HTTPS returned 200 with a real feed and no browser runtime errors. Private deployment paths and admin routes returned 404. Foreign-origin signed submissions returned 403; unsigned bytes sent to validation returned 400. No keys or social actions were created by these checks.
+
+26 protocol/gateway tests passed, including public-mode restrictions and global request budgets. The gateway is bounded by per-IP/global rate limits, request/body/page/concurrency limits, and its existing non-root read-only container with dropped capabilities and CPU/memory caps.
+
+For this existing deployment, public ingress to TCP3383 and a stale SSH source were removed. SSH is key-only from the current operator /32. Only HTTP80, HTTPS443 and Snapchain UDP3382 remain generally reachable. TCP3080,3381,3383,8126 and2019 were externally probed as unreachable. The adopted node’s HTTP/metrics sockets still listen on host interfaces but are blocked by its sole AWS security group; they were not rebound or restarted. Two-sample shard advancement/single-digit delays and a real cast read passed after the change.
+
+Public access deliberately serves the app and approved public protocol queries. It does not confer shell access or access to the operator’s signing keys. These checks are bounded evidence, not a guarantee against vulnerabilities or denial of service.

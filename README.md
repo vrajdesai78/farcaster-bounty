@@ -78,6 +78,6 @@ Project code: [MIT](LICENSE). Bundled upstream Snapchain configuration and fonts
 
 ## Install the client on your phone
 
-Open the HTTPS client address printed by `./relay client`, sign in with its generated login, then choose **Install app**. On iPhone/iPad, open that address in Safari and choose **Share → Add to Home Screen**. The node stays on EC2; the installed app is its browser client. Conversations and profiles have shareable hash routes. Drafts last for the current page session.
+Open the HTTPS client address printed by `./relay client`, sign in if the deployment requires a login, then choose **Install app**. On iPhone/iPad, open that address in Safari and choose **Share → Add to Home Screen**. The node stays on EC2; the installed app is its browser client. `./relay client --public` removes the website login; `--private` restores it. Keep raw node APIs restricted by the firewall when using public mode. Conversations and profiles have shareable hash routes. Drafts last for the current page session.
 
 The service worker provides a connection-error screen without caching account data, authenticated pages, API responses or signing keys. Reconnect a signer after closing/reloading the app. Browser-wallet availability depends on the mobile browser or wallet; home-screen installation does not supply an Ethereum wallet. Real-device installation and wallet-extension support must be tested separately from automated browser checks.

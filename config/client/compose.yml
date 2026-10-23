@@ -8,6 +8,7 @@ services:
     environment:
       PUBLIC_ORIGIN: https://${RELAY_DOMAIN:?Set RELAY_DOMAIN}
       RELAY_LOGIN_HASH: ${RELAY_LOGIN_HASH:?Set generated login hash}
+      RELAY_PUBLIC_CLIENT: ${RELAY_PUBLIC_CLIENT:-false}
       SNAPCHAIN_URL: http://127.0.0.1:3381
     restart: unless-stopped
     read_only: true

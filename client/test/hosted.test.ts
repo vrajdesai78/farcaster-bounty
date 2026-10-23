@@ -108,3 +108,20 @@ test('conversation requests use only the configured node',async t=>{
   assert.equal(seen[0].url,'/v1/castById?fid=2&hash='+hash);
   assert.equal(seen[0].authorization,undefined);
 });
+
+test('public access exposes only client resources and the bounded node allowlist',async t=>{
+ const {request,seen}=await fixture(t,{publicAccess:true});
+ const anonymous={headers:{Authorization:''}};
+ assert.equal((await request('/',anonymous)).status,200);
+ const config=await (await request('/api/config',anonymous)).json();assert.equal(config.publicAccess,true);assert.equal(JSON.stringify(config).includes(credential),false);
+ for(const path of ['/.env','/.relay-state/state.json','/server/production.mjs','/api/node/admin','/api/node/../.env'])assert.equal((await request(path,anonymous)).status,404);
+ assert.equal((await request('/api/node/castsByFid?fid=2&pageSize=251',anonymous)).status,400);
+ assert.equal((await request('/api/node/submitMessage',{method:'POST',headers:{Authorization:'',Origin:'https://foreign.test','Content-Type':'application/octet-stream'},body:Buffer.from([1])})).status,403);
+ assert.equal((await request('/api/node/submitMessage',{method:'POST',headers:{Authorization:'',Origin:origin,'Content-Type':'text/plain'},body:'unsigned'})).status,415);
+ assert.equal(seen.length,0);
+});
+test('global budgets cannot be bypassed with different client IPs',async t=>{
+ const {request}=await fixture(t,{publicAccess:true,globalReadLimit:2});
+ for(const ip of ['1.2.3.4','2.3.4.5'])assert.equal((await request('/api/config',{headers:{Authorization:'','X-Forwarded-For':ip}})).status,200);
+ assert.equal((await request('/api/config',{headers:{Authorization:'','X-Forwarded-For':'3.4.5.6'}})).status,429);
+});

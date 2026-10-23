@@ -21,12 +21,15 @@ export function createRelayServer(options) {
   const directory = resolve(options.directory || new URL('../dist',import.meta.url).pathname);
   const buckets = new Map();
   let active = 0;
+  let globalBudget = {start:Date.now(), reads:0, writes:0};
   const json = (res,status,data,headers={}) => {
     res.writeHead(status,{...security,'Content-Type':'application/json','Cache-Control':'no-store',...headers});
     res.end(JSON.stringify(data));
   };
   function limited(ip,write=false) {
     const now=Date.now();
+    if(now-globalBudget.start>=60000)globalBudget={start:now,reads:0,writes:0};
+    if(write ? ++globalBudget.writes>(options.globalWriteLimit ?? 120) : ++globalBudget.reads>(options.globalReadLimit ?? 6000))return true;
     if(buckets.size>=2048) for(const [key,value] of buckets) if(now-value.start>=60000) buckets.delete(key);
     if(!buckets.has(ip)) {
       if(buckets.size>=2048) return true;
@@ -48,13 +51,13 @@ export function createRelayServer(options) {
       if(auth.startsWith('Basic ') && auth.length<1024) decoded=Buffer.from(auth.slice(6),'base64').toString('utf8');
       const provided=createHash('sha256').update(decoded).digest();
       const publicInstallAsset=['/manifest.webmanifest','/sw.js','/assets/app-192.png','/assets/app-512.png'].includes(new URL(req.url,origin).pathname);
-      if(!publicInstallAsset && !timingSafeEqual(provided,expected)) return json(res,401,{error:'Sign in with the generated client login.'},{'WWW-Authenticate':'Basic realm="Farcaster client", charset="UTF-8"'});
+      if(options.publicAccess !== true && !publicInstallAsset && !timingSafeEqual(provided,expected)) return json(res,401,{error:'Sign in with the generated client login.'},{'WWW-Authenticate':'Basic realm="Farcaster client", charset="UTF-8"'});
       const url=new URL(req.url,origin);
       if(req.url.length>8192) return json(res,414,{error:'Request URL too long.'});
       if(url.pathname==='/healthz') return json(res,200,{status:'ok'});
       if(url.pathname==='/api/config') {
         if(req.method!=='GET') return json(res,405,{error:'Method not allowed.'});
-        return json(res,200,{nodeUrl:origin.origin+'/api/node',mode:'hosted',transport:'Hosted client · node on this server'});
+        return json(res,200,{nodeUrl:origin.origin+'/api/node',mode:'hosted',publicAccess:options.publicAccess === true,transport:'Hosted client · node on this server'});
       }
       if(url.pathname==='/setup') { res.writeHead(302,{...security,Location:options.guide || 'https://farcaster-client-sable.vercel.app/','Cache-Control':'no-store'}); return res.end(); }
       if(!url.pathname.startsWith('/api/node/')) {
@@ -103,13 +106,15 @@ export function createRelayServer(options) {
       } finally { active--; }
     } catch { if(!res.headersSent) json(res,502,{error:'Node unavailable. Check server logs and snapshot progress.'}); else res.end(); }
   });
+  server.maxConnections=128;
+  server.keepAliveTimeout=5000;
   server.requestTimeout=20000;
   server.headersTimeout=10000;
   return server;
 }
 
 if(process.argv[1] && resolve(process.argv[1])===fileURLToPath(import.meta.url)) {
-  const server=createRelayServer({origin:process.env.PUBLIC_ORIGIN,loginHash:process.env.RELAY_LOGIN_HASH,
+  const server=createRelayServer({origin:process.env.PUBLIC_ORIGIN,loginHash:process.env.RELAY_LOGIN_HASH,publicAccess:process.env.RELAY_PUBLIC_CLIENT==='true',
     target:process.env.SNAPCHAIN_URL,directory:process.env.STATIC_DIR,rpcAuth:process.env.SNAPCHAIN_RPC_AUTH});
   server.listen(Number(process.env.PORT || 3080),'127.0.0.1',()=>console.log('Farcaster client service listening on loopback.'));
   for(const signal of ['SIGINT','SIGTERM']) process.on(signal,()=>server.close(()=>process.exit(0)));

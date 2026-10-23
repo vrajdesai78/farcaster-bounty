@@ -383,7 +383,7 @@ def hosted_web_rules(state):
 
 def client(args):
     if args.local:
-        if args.domain or args.credentials:
+        if args.domain or args.credentials or getattr(args, 'public_client', False) or getattr(args, 'private_client', False):
             raise RuntimeError('--local cannot be combined with hosted domain/login options.')
         return local_client(args)
     state = load()
@@ -411,6 +411,10 @@ def client(args):
     with os.fdopen(os.open(access_file, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), 'w') as stream:
         stream.write(json.dumps(access, indent=2) + '\n')
     os.chmod(access_file, 0o600)
+    if getattr(args, 'public_client', False):
+        state['client_public'] = True
+    elif getattr(args, 'private_client', False):
+        state['client_public'] = False
     state.setdefault('client_owner', str(uuid.uuid4()))
     state.update(client_domain=domain, client_url=access['url'], client_custom_domain=bool(args.domain) or state.get('client_custom_domain', False))
     save(state)
@@ -435,7 +439,7 @@ def client(args):
         archive_path.unlink(missing_ok=True)
     login_hash = hashlib.sha256((access['username'] + ':' + access['password']).encode()).hexdigest()
     config_hash = hashlib.sha256((ROOT / 'config/client/Caddyfile').read_bytes()).hexdigest()
-    environment = 'RELAY_DOMAIN=' + domain + '\nRELAY_LOGIN_HASH=' + login_hash + '\nRELAY_CONFIG_SHA=' + config_hash + '\n'
+    environment = 'RELAY_DOMAIN=' + domain + '\nRELAY_LOGIN_HASH=' + login_hash + '\nRELAY_CONFIG_SHA=' + config_hash + '\nRELAY_PUBLIC_CLIENT=' + str(state.get('client_public', False)).lower() + '\n'
     run(ssh_args(state) + ['sudo install -m 600 /dev/stdin ' + directory + '/.env'], input=environment)
     remote(state, 'sudo cp ' + directory + '/source/config/client/compose.yml ' + directory + '/compose.yml && '
            'sudo cp ' + directory + '/source/config/client/Caddyfile ' + directory + '/Caddyfile')
@@ -453,9 +457,12 @@ def client(args):
                     raise RuntimeError('Unexpected hosted health response.')
             state['client_verified'] = True
             save(state)
-            print('Hosted client ready: ' + access['url'] + '\nLogin saved privately: ' + str(access_file) +
-                  '\nDisplay it locally with ./relay client --credentials. Your terminal can now close.')
-            if sys.stdout.isatty():
+            print('Hosted client ready: ' + access['url'])
+            if state.get('client_public'):
+                print('Public client: no website login required. Each account still needs its own signer to post.')
+            else:
+                print('Login saved privately: ' + str(access_file) + '\nDisplay it locally with ./relay client --credentials. Your terminal can now close.')
+            if sys.stdout.isatty() and not state.get('client_public'):
                 print('Username: ' + access['username'] + '\nPassword: ' + access['password'])
             return
         except (OSError, ValueError):
@@ -551,6 +558,9 @@ def main():
     p = commands.add_parser('client', help='Deploy the HTTPS client beside your node; --local keeps the development tunnel')
     p.add_argument('--local', action='store_true'); p.add_argument('--domain', help='Optional hostname with an A record pointing to this server')
     p.add_argument('--credentials', action='store_true', help='Explicitly display the saved hosted login on your own terminal')
+    access_mode = p.add_mutually_exclusive_group()
+    access_mode.add_argument('--public', dest='public_client', action='store_true', help='Open the hosted client without a website password; account signatures still required')
+    access_mode.add_argument('--private', dest='private_client', action='store_true', help='Require the generated website login again')
     p.set_defaults(func=client)
     p = commands.add_parser('status', help='Inspect sync; --verify requires two samples and a real read')
     p.add_argument('--verify', action='store_true'); p.set_defaults(func=status)
