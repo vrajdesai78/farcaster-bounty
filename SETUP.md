@@ -12,7 +12,7 @@ Start with reads: no Farcaster wallet is required to read a cast. GitHub access 
 
 On your local macOS/Linux computer (or WSL2), install Python 3.9+, OpenSSH, Git or an archive extractor. Node.js is only needed locally for the optional development mode; the hosted client builds inside its pinned container on EC2. For AWS, install/configure AWS CLI v2 with your own account credentials. Those cloud credentials are not third-party social API keys and are never copied to the server.
 
-Use a dedicated Linux host with 4 vCPU, 16 GB RAM, a public IP and 2 TB SSD. The managed path uses Ubuntu 22.04, `m5.xlarge`, 2,000 GiB encrypted gp3, 3,000 IOPS and 125 MiB/s. Compute, provisioned storage, public IPv4, applicable transfer and taxes cost money. Check the [AWS calculator](https://calculator.aws/) for your region. No automatic shutdown or deletion is installed. Stopping compute retains storage charges.
+Use a dedicated Linux host with 4 vCPU, 16 GB RAM, a public IP and 2 TB SSD. The managed path uses Ubuntu 22.04, `m5.xlarge`, 2,000 GiB encrypted gp3, 3,000 IOPS and 125 MiB/s. Compute, provisioned storage, public IPv4, applicable transfer and taxes cost money. Check the [AWS calculator](https://calculator.aws/) for your region. By default, no automatic shutdown or deletion is installed. Stopping compute retains storage charges.
 
 The AWS principal needs: `ec2:Describe*`, `ec2:ImportKeyPair`, `ec2:CreateSecurityGroup`, `ec2:AuthorizeSecurityGroupIngress`, `ec2:RunInstances`, `ec2:CreateTags`, and `ssm:GetParameter` for public Ubuntu image discovery. Explicit cleanup also needs `ec2:StopInstances`, `ec2:TerminateInstances`, `ec2:DeleteSecurityGroup`, `ec2:DeleteKeyPair`. Scope credentials to the intended account/region. Do not hardcode credentials or attach them to the server.
 
@@ -212,3 +212,11 @@ Adopted hosts are never stopped/destroyed by the setup helper. The hosted client
 ## Evidence and remaining gates
 
 Read [live client evidence](docs/LIVE-CLIENT-VERIFICATION.md) and [publication readiness](docs/public/READINESS.md). Own-node sync and mainnet client actions were verified 20 October 2026. A separate fresh-session test passed provisioning, node installation and HTTPS client deployment on a new AWS server on 21 October without installation fixes. Full sync and social actions on that server remain in progress. An independent human reproduction is still required. The exact bounty cutoff remains unverified. No endorsement or submission is fabricated.
+
+## Optional disposable test deadline
+
+For a new test server that must not be kept, add `--test-lifetime-hours 24` to the provision command (valid range: 1–48). This explicitly requests irreversible termination and deletion of the root disk at an absolute UTC deadline. It is off by default and refused for existing/adopted hosts. The launch supplies a cloud-init script installing `relay-test-expiry.timer` and sets EC2's instance-initiated shutdown behavior to `terminate`. The saved deadline is reused on a provisioning retry; it is not extended.
+
+Before continuing installation, verify cloud-init completed, `sudo systemctl is-active relay-test-expiry.timer`, and `sudo systemctl list-timers relay-test-expiry.timer` on the new server. Independently check EC2's shutdown behavior is `terminate` and its root disk has `DeleteOnTermination=true`. If the timer is not armed, destroy the disposable deployment rather than leaving it unmonitored. This is a server-side safeguard, not a guarantee against OS/cloud failures.
+
+Run normal ownership-checked `./relay destroy --confirm INSTANCE_ID` when testing finishes, even if the server has already terminated, to remove its recorded security group and key pair. Independently verify the instance, root volume, security group and key pair are gone. This option never changes an existing deployment or the default no-expiry setup.

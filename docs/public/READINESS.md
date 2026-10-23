@@ -8,7 +8,7 @@
 - [x] Responsive static tutorial, private source access instructions, licenses and Vercel guide configuration.
 - [x] Clean source archive installed the client and read the existing node through the three-command adoption path; two-sample helper verified sync. This is not a fresh AWS provisioning run.
 - [x] Fresh session and clone: all three commands passed on a new AWS server on 21 October without installation fixes (pinned commit `7f55e8a`). Existing local tools and AWS/GitHub authentication were reused.
-- [ ] Full sync, real reads and social actions on that fresh server. Snapshot restore is in progress; installation success alone does not establish these.
+- [ ] Full sync, real reads and social actions on that fresh server. The 21–22 October test ended without these checks, and its test resources were deleted. Installation success alone does not establish full acceptance.
 - [ ] Independent human follows the full tutorial on their own server/client and publicly endorses it.
 - [ ] Manual wallet-extension and positive recovery-phrase live checks. The live wallet path used an automated local signing bridge.
 - [x] Repository pushed (private); Vercel microsite deployed and checked. Source access for the bounty remains unresolved.

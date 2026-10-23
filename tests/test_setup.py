@@ -44,6 +44,19 @@ class SetupTests(unittest.TestCase):
             aws.assert_not_called()
             self.assertEqual(relay.STATE_FILE.stat().st_mode & 0o777, 0o600)
     def test_resumption_and_instance_payload(self):
+        self.check_resumption_payload()
+    def test_test_expiry_is_atomic_and_preserved_across_launch_retry(self):
+        self.check_resumption_payload(lifetime=24)
+    def test_test_expiry_rejects_unsafe_or_existing_targets_before_aws(self):
+        with patch.object(relay, 'aws') as aws:
+            for hours in [0, -1, 49]:
+                with self.assertRaises(RuntimeError): relay.provision(self.args(test_lifetime_hours=hours))
+            with self.assertRaises(RuntimeError):
+                relay.provision(self.args(test_lifetime_hours=24, existing_host='ubuntu@example.org'))
+            relay.save({'host': 'ubuntu@example.org'})
+            with self.assertRaises(RuntimeError): relay.provision(self.args(test_lifetime_hours=24))
+            aws.assert_not_called()
+    def check_resumption_payload(self, lifetime=None):
         state = {'key': False, 'group': False, 'permissions': [], 'launches': {}, 'once_failed': False}
         def fake_run(command, **kwargs):
             if command[0] == 'ssh-keygen':
@@ -65,7 +78,18 @@ class SetupTests(unittest.TestCase):
                 import json
                 disk=json.loads(a[a.index('--block-device-mappings')+1])[0]['Ebs']
                 self.assertEqual((disk['VolumeSize'],disk['Throughput'],disk['Iops'],disk['Encrypted']), (2000,125,3000,True))
-                self.assertNotIn('--user-data', a)
+                if lifetime:
+                    self.assertEqual(a[a.index('--instance-initiated-shutdown-behavior')+1], 'terminate')
+                    script=Path(a[a.index('--user-data')+1].removeprefix('file://')).read_text()
+                    self.assertIn('/usr/sbin/shutdown -h now', script)
+                    self.assertIn('Persistent=true', script)
+                    deadline=relay.load()['test_terminate_at']
+                    self.assertIn(relay.time.strftime('%Y-%m-%d %H:%M:%S UTC', relay.time.gmtime(deadline)), script)
+                    self.assertEqual(state.setdefault('deadline',deadline),deadline)
+                    self.assertTrue(disk['DeleteOnTermination'])
+                else:
+                    self.assertNotIn('--user-data', a)
+                    self.assertNotIn('--instance-initiated-shutdown-behavior', a)
                 token=a[a.index('--client-token')+1]
                 state['launches'].setdefault(token,'i-test')
                 if not state['once_failed']:
@@ -76,8 +100,8 @@ class SetupTests(unittest.TestCase):
             if action == 'describe-instances': return {'Reservations':[{'Instances':[{'PublicIpAddress':'203.0.113.2'}]}]}
             raise AssertionError(action)
         with patch.object(relay,'run',side_effect=fake_run), patch.object(relay,'aws',side_effect=fake_aws):
-            with self.assertRaises(RuntimeError): relay.provision(self.args())
-            relay.provision(self.args())
+            with self.assertRaises(RuntimeError): relay.provision(self.args(test_lifetime_hours=lifetime))
+            relay.provision(self.args(test_lifetime_hours=lifetime))
             relay.provision(self.args())
         self.assertEqual(len(state['launches']),1)
         self.assertEqual(len(state['permissions']),3)

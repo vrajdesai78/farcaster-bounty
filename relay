@@ -90,8 +90,43 @@ def validate_remote_dir(value):
     return value
 
 
+def test_expiry_script(deadline):
+    # Absolute UTC deadline survives reboot and provisioning retries.
+    when = time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime(deadline))
+    return f"""#!/bin/bash
+set -eu
+cat > /etc/systemd/system/relay-test-expiry.service <<'UNIT'
+[Unit]
+Description=Terminate this disposable Farcaster test server
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/shutdown -h now
+UNIT
+cat > /etc/systemd/system/relay-test-expiry.timer <<'UNIT'
+[Unit]
+Description=Deadline for disposable Farcaster test server
+[Timer]
+OnCalendar={when}
+Persistent=true
+AccuracySec=1s
+Unit=relay-test-expiry.service
+[Install]
+WantedBy=timers.target
+UNIT
+systemctl daemon-reload
+systemctl enable --now relay-test-expiry.timer
+"""
+
+
 def provision(args):
+    lifetime = getattr(args, 'test_lifetime_hours', None)
+    if lifetime is not None and not 1 <= lifetime <= 48:
+        raise RuntimeError('--test-lifetime-hours must be between 1 and 48.')
+    if lifetime is not None and args.existing_host:
+        raise RuntimeError('Test expiry is only for a new managed instance, never an existing host.')
     prior = load(False)
+    if prior.get('host') and lifetime is not None and prior.get('test_lifetime_hours') != lifetime:
+        raise RuntimeError('Cannot add or change test expiry on an existing host. Use its original state to resume without this flag.')
     if prior.get('destroyed'):
         raise RuntimeError('This deployment was destroyed. Archive its state and choose a fresh RELAY_STATE_DIR to provision another.')
     if prior.get('host'):
@@ -126,11 +161,18 @@ def provision(args):
         print(json.dumps({'plan': 'create one EC2 instance', 'region': args.region, 'instance': 'm5.xlarge',
                           'disk': '2000 GiB encrypted gp3 / 3000 IOPS / 125 MiB/s', 'ssh': str(cidr),
                           'http': 'loopback via SSH', 'peers': 'public UDP 3382 and TCP 3383',
-                          'shutdown': 'none; explicit cleanup required', 'new_resources_created': False}, indent=2))
+                          'shutdown': ('terminate after ' + str(lifetime) + ' hours; test data deleted') if lifetime else 'none; explicit cleanup required', 'new_resources_created': False}, indent=2))
         return
     require('aws', 'ssh', 'ssh-keygen')
     state = prior or {'mode': 'managed', 'token': str(uuid.uuid4()), 'region': args.region,
                       'profile': args.profile, 'remote_dir': '/opt/relay-snapchain'}
+    if lifetime is not None:
+        if state.get('test_lifetime_hours', lifetime) != lifetime:
+            raise RuntimeError('Do not change the lifetime during a provisioning retry.')
+        state.setdefault('test_lifetime_hours', lifetime)
+        state.setdefault('test_terminate_at', int(time.time()) + lifetime * 3600)
+    if state.get('test_terminate_at', time.time() + 1) <= time.time():
+        raise RuntimeError('This test deadline has passed. Inspect and clean up its saved resources; do not launch another.')
     save(state)  # Stable names/client token survive interruptions and permit resuming.
     tag = 'relay-' + state['token'][:12]
     state.setdefault('key', str(STATE_DIR / 'id_ed25519'))
@@ -184,12 +226,17 @@ def provision(args):
     if not state.get('instance_id'):
         disk = [{'DeviceName': state['root_device'], 'Ebs': {'VolumeSize': 2000, 'VolumeType': 'gp3',
                 'Iops': 3000, 'Throughput': 125, 'Encrypted': True, 'DeleteOnTermination': True}}]
+        expiry_args = []
+        if state.get('test_terminate_at'):
+            expiry = STATE_DIR / 'test-expiry.sh'
+            expiry.write_text(test_expiry_script(state['test_terminate_at']))
+            expiry_args = ['--user-data', 'file://' + str(expiry), '--instance-initiated-shutdown-behavior', 'terminate']
         launched = aws(state, 'ec2', 'run-instances', '--image-id', state['image'], '--instance-type', 'm5.xlarge',
             '--count', '1', '--subnet-id', state['subnet'], '--security-group-ids', state['security_group'],
             '--associate-public-ip-address', '--key-name', state['key_name'], '--client-token', state['token'],
             '--block-device-mappings', json.dumps(disk), '--metadata-options', 'HttpTokens=required',
             '--tag-specifications', json.dumps([{'ResourceType': 'instance', 'Tags': [{'Key': 'Name', 'Value': tag},
-               {'Key': 'RelayOwner', 'Value': state['token']}]}]), '--monitoring', 'Enabled=false')
+               {'Key': 'RelayOwner', 'Value': state['token']}]}]), '--monitoring', 'Enabled=false', *expiry_args)
         state['instance_id'] = launched['Instances'][0]['InstanceId']
         save(state)
     print('Waiting for instance', state['instance_id'], '(rerun provision to resume if interrupted).', flush=True)
@@ -199,7 +246,12 @@ def provision(args):
         raise RuntimeError('Instance has no public IP. Check subnet routing; saved state prevents another launch.')
     state['host'] = 'ubuntu@' + current['PublicIpAddress']
     save(state)
-    print('Host ready:', state['host'], '\nNext: ./relay node\nCharges continue until explicit stop/teardown. No shutdown is scheduled.')
+    print('Host ready:', state['host'], '\nNext: ./relay node')
+    if state.get('test_terminate_at'):
+        print('DISPOSABLE TEST: termination requested for', time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime(state['test_terminate_at'])),
+              '\nVerify relay-test-expiry.timer on the server before installing. Test data will be deleted; security group/key cleanup still requires destroy.')
+    else:
+        print('Charges continue until explicit stop/teardown. No shutdown is scheduled.')
 
 
 def node(args):
@@ -487,10 +539,11 @@ def lifecycle(args):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Provision compute, start Snapchain, launch your client. No shutdown timers.')
+    parser = argparse.ArgumentParser(description='Provision compute, start Snapchain, launch your client. Automatic expiry only when explicitly requested for a disposable test.')
     commands = parser.add_subparsers(dest='command', required=True)
     p = commands.add_parser('provision', help='Create paid AWS compute, or adopt an existing server')
     p.add_argument('--ack-costs', action='store_true'); p.add_argument('--dry-run', action='store_true')
+    p.add_argument('--test-lifetime-hours', type=int, help='DISPOSABLE new server only: terminate and delete its root disk after 1–48 hours; still clean up its security group/key')
     p.add_argument('--ssh-cidr'); p.add_argument('--region', default='us-east-1'); p.add_argument('--profile')
     p.add_argument('--subnet-id'); p.add_argument('--ami'); p.add_argument('--existing-host'); p.add_argument('--key'); p.add_argument('--remote-dir')
     p.set_defaults(func=provision)
