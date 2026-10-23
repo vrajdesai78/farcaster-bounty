@@ -114,7 +114,7 @@ class SetupTests(unittest.TestCase):
             relay.shell(SimpleNamespace())
             command=run.call_args.args[0]
             self.assertEqual(command[0],'ssh');self.assertEqual(command[-1],'ubuntu@example.org')
-            self.assertEqual(command[command.index('-i')+1],str(key))
+            self.assertEqual(command[command.index('-i')+1],str(key.resolve()))
             self.assertFalse(run.call_args.kwargs['capture']);aws.assert_not_called()
         self.assertEqual(relay.STATE_FILE.read_text(),before)
 

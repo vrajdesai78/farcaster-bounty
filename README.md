@@ -4,6 +4,8 @@
 
 ## Start with three commands
 
+Use the [guide’s command builder](https://farcaster-client-sable.vercel.app/#commands) to enter your IP and copy the exact commands. The snippet below is a template; the builder fills it without source/config edits. Sign in to AWS and check the prerequisites in the guide first. Use a separate fresh clone for a new deployment; an existing folder resumes its recorded server.
+
 After downloading/cloning this source and installing the [prerequisites](SETUP.md), run these from the repository root. Replace `YOUR_IP` with your current public IPv4 address.
 
 ```sh
