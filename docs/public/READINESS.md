@@ -20,3 +20,11 @@ Do not replace missing endorsement or source-access URLs with placeholders. The 
 `./relay client` deploys a separate production service and Caddy on the node host; `--local` preserves development mode. Live HTTPS, reads, signed social actions and revocation passed on the existing server; see [hosted evidence](HOSTED-CLIENT-VERIFICATION.md). The fresh-server run remains separate evidence and is not complete.
 
 The 23 October retry was cancelled by the operator before node installation. Its replacement test instance and dedicated resources were cleaned up; it contributes no new sync/read/write acceptance evidence.
+
+## Copy/paste walkthrough review — 23 October 2026
+
+The default AWS path requires no source/config edits after prerequisites. The guide now supplies copy controls for tool checks, browser-based AWS login/SSO, cloning, setup, sync and a saved-host SSH session. Public IP, optional region/profile/subnet and an adopted node's directory are entered in form fields that generate shell-quoted commands. Cleanup previews print a complete confirmation command containing the saved instance ID. The all-local client prints a copyable project-directory command for a second terminal. Existing-account and funded OP signup instructions match the current client.
+
+A recording must use separate fresh-clone state if it is intended to show a new deployment. Reusing the current deployment folder resumes its recorded server. AWS account activation/permissions, installed tools, an existing default VPC/subnet (or an appropriate existing public subnet), wallet approval and optional OP funding remain user prerequisites. The guide does not automate those account/provider decisions.
+
+Verification: 26 Python tests, guide copy/validation checks at 320/390/768/1440 widths, and source packaging passed. The new SSH helper was tested with a mocked saved host; no new EC2 instance, paid account transaction, node restart or cleanup action was performed during this review. This review does not complete fresh-server full-sync acceptance.

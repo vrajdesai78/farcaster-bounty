@@ -507,6 +507,12 @@ def logs(args):
     print(remote(state, 'cd ' + shlex.quote(directory) + ' && sudo docker compose -f ' + shlex.quote(compose) + ' logs --tail 40 snapchain'))
 
 
+def shell(args):
+    state = load()
+    print('Opening your saved server over SSH. Type exit to return to your computer.', flush=True)
+    run(ssh_args(state), capture=False)
+
+
 def disconnect(args):
     state = load()
     control = str(STATE_DIR / 'ssh-control')
@@ -524,7 +530,7 @@ def lifecycle(args):
         print('No instance recorded. Inspect partial resources in the private state: key_name/security_group. No resources deleted.')
         return
     if args.confirm != identifier:
-        print('PLAN:', args.command, identifier, '\nRepeat with --confirm ' + identifier + ' only after reviewing SETUP.md. No changes made.')
+        print('PLAN:', args.command, identifier, '\nNo changes made. After reviewing the target and SETUP.md, copy this exact command:\n./relay ' + args.command + ' --confirm ' + identifier)
         return
     current = aws(state, 'ec2', 'describe-instances', '--instance-ids', identifier)['Reservations'][0]['Instances'][0]
     if not any(t['Key'] == 'RelayOwner' and t['Value'] == state['token'] for t in current.get('Tags', [])):
@@ -565,6 +571,7 @@ def main():
     p = commands.add_parser('status', help='Inspect sync; --verify requires two samples and a real read')
     p.add_argument('--verify', action='store_true'); p.set_defaults(func=status)
     commands.add_parser('logs', help='Read the last 40 node log lines').set_defaults(func=logs)
+    commands.add_parser('ssh', help='Open an SSH terminal on the saved host without editing a hostname or key path').set_defaults(func=shell)
     commands.add_parser('disconnect', help='Close only the managed local SSH tunnel').set_defaults(func=disconnect)
     for name in ['stop', 'destroy']:
         p = commands.add_parser(name, help='Explicit managed-instance lifecycle action; no change without matching --confirm')
@@ -574,7 +581,7 @@ def main():
     # Atomic state replacement lets diagnostics read safely during installation.
     # The local dev server must not hold the lock for its entire lifetime either.
     with contextlib.ExitStack() as stack:
-        if args.command not in ('status', 'logs') and (args.command != 'client' or not args.local):
+        if args.command not in ('status', 'logs', 'ssh') and (args.command != 'client' or not args.local):
             lock = stack.enter_context(open(STATE_DIR / 'lock', 'a'))
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         args.func(args)

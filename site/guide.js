@@ -10,14 +10,20 @@ function updateCommands() {
   const ip = publicIPv4();
   const host = $('#ssh-host').value.trim();
   const key = $('#ssh-key').value.trim();
-  const provision = `./relay provision --ack-costs --ssh-cidr ${isIPv4(ip) ? ip : 'YOUR_IP'}/32`;
+  const region = $('#aws-region').value.trim();
+  const profile = $('#aws-profile').value.trim();
+  const subnet = $('#aws-subnet').value.trim();
+  const directory = $('#remote-dir').value.trim();
+  const options = (region !== 'us-east-1' ? ` --region ${quote(region)}` : '') + (profile ? ` --profile ${quote(profile)}` : '') + (subnet ? ` --subnet-id ${quote(subnet)}` : '');
+  const provision = `./relay provision --ack-costs --ssh-cidr ${isIPv4(ip) ? ip : 'YOUR_IP'}/32${options}`;
+  $('#overview-provision-command').textContent = isIPv4(ip) ? provision : 'Fill in your IP in step 2 to generate command 1';
   $('#provision-command').textContent = mode === 'aws'
     ? provision
-    : `./relay provision --existing-host ${host || 'ubuntu@YOUR_SERVER'} --key ${quote(key || '~/.ssh/id_ed25519')}`;
+    : `./relay provision --existing-host ${host || 'ubuntu@YOUR_SERVER'} --key ${quote(key || '~/.ssh/id_ed25519')}${directory !== '/opt/snapchain' ? ` --remote-dir ${quote(directory)}` : ''}`;
   $('#dry-run-command').textContent = `${provision} --dry-run`;
   $('#first-step-title').textContent = mode === 'aws' ? 'Create the server' : 'Connect your server';
   $('#provision-description').textContent = mode === 'aws'
-    ? 'Creates the server in us-east-1 and saves its details in .relay-state/. AWS billing starts here. Wait for “Host ready:” and for your terminal prompt to return.'
+    ? `Creates the server in ${region || 'your selected region'} and saves its details in .relay-state/. AWS billing starts here. Wait for “Host ready:” and for your terminal prompt to return.`
     : 'Saves your server and key path. Nothing is installed yet.';
   $('#node-description').textContent = mode === 'aws'
     ? 'Installs Docker, starts the node and begins the snapshot restore. After “Snapshot restore started”, you can install the client while the node restores in the background.'
@@ -81,6 +87,26 @@ for (const button of document.querySelectorAll('[data-copy]')) button.addEventLi
     $('#ssh-cidr').focus();
     return;
   }
+  if (needsIPv4) {
+    const region = $('#aws-region').value.trim();
+    const profile = $('#aws-profile').value.trim();
+    const subnet = $('#aws-subnet').value.trim();
+    if (!/^[a-z]{2}(?:-[a-z]+)+-\d+$/.test(region) || profile.length > 128 || /[\r\n\0]/.test(profile) || (subnet && !/^subnet-(?:[a-f0-9]{8}|[a-f0-9]{17})$/.test(subnet))) {
+      $('#command-status').textContent = 'Check the optional settings: enter a valid AWS region, a single-line profile name and a subnet ID if supplied.';
+      $('#command-status').classList.add('error');
+      $('#aws-fields details').open = true;
+      return;
+    }
+  }
+  if (id === 'provision-command' && mode === 'existing') {
+    const directory = $('#remote-dir').value.trim();
+    if (!/^\/[A-Za-z0-9_./-]+$/.test(directory) || directory === '/' || directory.split('/').includes('..')) {
+      $('#command-status').textContent = 'Enter the existing node’s absolute directory, without .. or shell characters.';
+      $('#command-status').classList.add('error');
+      $('#remote-dir').focus();
+      return;
+    }
+  }
   if (id === 'provision-command' && mode === 'existing'
     && (!/^[A-Za-z0-9_.-]+@[A-Za-z0-9_.-]+$/.test($('#ssh-host').value.trim()) || !$('#ssh-key').value.trim())) {
     $('#command-status').textContent = 'Enter a user@hostname SSH target and a local private-key path.';
@@ -91,7 +117,7 @@ for (const button of document.querySelectorAll('[data-copy]')) button.addEventLi
   try {
     await copyText(document.getElementById(id).textContent);
     announce(button.dataset.runOn === 'server' ? 'Command copied. Run it on your server over SSH.'
-      : ['clone-command', 'local-clone-command'].includes(id) ? 'Commands copied. Run them on your computer, in the folder where you keep projects.'
+      : ['clone-command', 'local-clone-command', 'fresh-clone-command'].includes(id) ? 'Commands copied. Run them on your computer, in the folder where you keep projects.'
       : 'Command copied. Run it in the project folder.');
     $('#command-status').classList.remove('error');
   } catch (error) { announce(error.message); }

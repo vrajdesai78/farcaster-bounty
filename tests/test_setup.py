@@ -106,6 +106,26 @@ class SetupTests(unittest.TestCase):
         self.assertEqual(len(state['launches']),1)
         self.assertEqual(len(state['permissions']),3)
         self.assertEqual(relay.load()['host'],'ubuntu@203.0.113.2')
+    def test_saved_host_shell_uses_existing_key_without_aws_or_state_mutation(self):
+        key=self.directory/'existing key';key.write_text('fixture')
+        relay.save({'mode':'adopted','host':'ubuntu@example.org','key':str(key)})
+        before=relay.STATE_FILE.read_text()
+        with patch.object(relay,'run') as run,patch.object(relay,'aws') as aws:
+            relay.shell(SimpleNamespace())
+            command=run.call_args.args[0]
+            self.assertEqual(command[0],'ssh');self.assertEqual(command[-1],'ubuntu@example.org')
+            self.assertEqual(command[command.index('-i')+1],str(key))
+            self.assertFalse(run.call_args.kwargs['capture']);aws.assert_not_called()
+        self.assertEqual(relay.STATE_FILE.read_text(),before)
+
+    def test_cleanup_preview_prints_complete_copyable_confirmation_without_mutating(self):
+        import contextlib,io
+        relay.save({'mode':'managed','instance_id':'i-test','region':'us-east-1','token':'test-owner'})
+        output=io.StringIO()
+        with patch.object(relay,'aws') as aws,contextlib.redirect_stdout(output):
+            relay.lifecycle(SimpleNamespace(command='destroy',confirm=None));aws.assert_not_called()
+        self.assertIn('\n./relay destroy --confirm i-test\n',output.getvalue())
+
     def test_adopted_host_cannot_be_stopped_or_destroyed(self):
         relay.save({'mode':'adopted','host':'ubuntu@example.org'})
         with patch.object(relay,'aws') as aws:

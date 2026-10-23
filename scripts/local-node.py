@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import shlex
 import socket
 import subprocess
 import time
@@ -87,6 +88,7 @@ def client():
     if version<(22,12):raise RuntimeError('Install Node.js 22.12+ for the local client.')
     if not (ROOT/'client/node_modules').is_dir():run(['npm','ci'],capture=False,cwd=ROOT/'client')
     print('Local client: http://127.0.0.1:5173 — keep this terminal open. Ctrl-C stops the client, not the node.',flush=True)
+    print('For logs and sync checks, open a second terminal and copy this command:\ncd ' + shlex.quote(str(ROOT)),flush=True)
     run(['npm','run','dev'],capture=False,cwd=ROOT/'client',env=dict(os.environ,SNAPCHAIN_URL='http://127.0.0.1:3381',PORT='5173'))
 
 def main():

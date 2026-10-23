@@ -2,7 +2,7 @@
 
 This guide covers the same setup as the interactive tutorial in `site/`. See [verification status](docs/public/READINESS.md) for completed checks and remaining tests.
 
-## First time using a terminal?
+## Before starting
 
 Use Terminal on macOS, a terminal app on Linux, or Ubuntu inside WSL2 on Windows. Install the tools in that environment. Paste one command at a time and press Enter; wait for it to finish before continuing. After cloning, `cd farcaster-bounty` moves into the project folder. Run every `./relay` command from that same folder. Keep its hidden `.relay-state` directory so you can resume and clean up the same server.
 
@@ -10,7 +10,7 @@ Start with reads: no Farcaster wallet is required to read a cast. GitHub access 
 
 ## Prerequisites and costs
 
-On your local macOS/Linux computer (or WSL2), install Python 3.9+, OpenSSH, Git or an archive extractor. Node.js is only needed locally for the optional development mode; the hosted client builds inside its pinned container on EC2. For AWS, install/configure AWS CLI v2 with your own account credentials. Those cloud credentials are not third-party social API keys and are never copied to the server.
+On your local macOS/Linux computer (or WSL2), install Python 3.9+, OpenSSH, Git or an archive extractor. On the AWS path, Node.js is only needed locally for the optional development mode; the hosted client builds inside its pinned container on EC2. For AWS, install AWS CLI 2.32.0+ and sign in with your own account credentials. Use `aws login` for a console account (IAM users/roles also need SignInLocalDevelopmentAccess). For IAM Identity Center, use `aws configure sso --profile default` followed by `aws sso login --profile default`. Use `us-east-1` and the default CLI profile for the commands as shown; the guide’s optional fields generate commands for a named profile or another region. Those cloud credentials are not third-party social API keys and are never copied to the server.
 
 Use a dedicated Linux host with 4 vCPU, 16 GB RAM, a public IP and 2 TB SSD. The managed path uses Ubuntu 22.04, `m5.xlarge`, 2,000 GiB encrypted gp3, 3,000 IOPS and 125 MiB/s. Compute, provisioned storage, public IPv4, applicable transfer and taxes cost money. Check the [AWS calculator](https://calculator.aws/) for your region. By default, no automatic shutdown or deletion is installed. Stopping compute retains storage charges.
 
@@ -18,7 +18,7 @@ The AWS principal needs: `ec2:Describe*`, `ec2:ImportKeyPair`, `ec2:CreateSecuri
 
 ## Download and check the setup helper
 
-`./relay` is a Python script in this repository, not a preinstalled command. A repository is the collection of project files hosted on GitHub. These files are public and MIT licensed; you do not need a GitHub account, invitation or command-line GitHub login to download them. You do not need to create your own repository. In a terminal on your computer, check the required tools and AWS login:
+`./relay` is a Python script in this repository, not a preinstalled command. These files are public and MIT licensed; you do not need a GitHub account, invitation or command-line GitHub login to download them. You do not need to create your own repository. In a terminal on your computer, check the required tools and AWS login:
 
 ```sh
 git --version
@@ -28,7 +28,7 @@ aws --version
 aws sts get-caller-identity
 ```
 
-The first four commands print versions; the last identifies the AWS account that will pay for the server. Resolve missing tools or login errors before proceeding. Download the project:
+The first four commands print versions; the last identifies the AWS account that will pay for the server. Resolve missing tools or login errors before proceeding. Download the project into a new folder:
 
 ```sh
 git clone https://github.com/vrajdesai78/farcaster-bounty.git
@@ -36,11 +36,11 @@ cd farcaster-bounty
 ./relay --help
 ```
 
-`git clone` downloads the project, `cd` enters its folder, and `./relay --help` lists the helper's commands without creating resources. Expect output starting with `usage: relay`. If cloning fails, check the URL and your network connection. If you already cloned it, use that existing folder. Run every later command there and keep `.relay-state` for retries and cleanup. The public source is available at https://github.com/vrajdesai78/farcaster-bounty under the MIT license.
+`git clone` downloads the project, `cd` enters its folder, and `./relay --help` lists the helper's commands without creating resources. Expect output starting with `usage: relay`. If cloning fails, check the URL and your network connection. Use an existing clone only to resume its saved deployment. For a separate recording/new setup, use `git clone https://github.com/vrajdesai78/farcaster-bounty.git farcaster-node-demo` and `cd farcaster-node-demo` from your projects folder. That creates separate state and, if you provision, another paid server. Do not delete old deployment state. Run every later command there and keep `.relay-state` for retries and cleanup. The public source is available at https://github.com/vrajdesai78/farcaster-bounty under the MIT license.
 
 ## 1. Provision compute
 
-Replace `YOUR_IP` with your current public IPv4 (for example, discover it through your router or cloud console). A /32 restricts SSH to that address.
+In the [guide’s command builder](https://farcaster-client-sable.vercel.app/#commands), paste your public IPv4 from https://checkip.amazonaws.com/ and copy the generated command. No source/config changes are required. The snippet below is a template; the builder fills it without manually editing commands. A /32 restricts SSH to that address. Your account needs a default VPC/subnet in the chosen region, or an existing internet-routed subnet entered in the builder.
 
 ```sh
 ./relay provision --ack-costs --ssh-cidr YOUR_IP/32
@@ -86,7 +86,7 @@ New installs use `/opt/relay-snapchain`. Snapshot download, decompression, tar e
 ./relay logs
 ```
 
-Never infer a stall just because tar extraction is quiet. Check actual progress/free disk before restarting. No full-sync ETA is guaranteed.
+Never infer a stall just because tar extraction is quiet. Check actual progress/free disk before restarting. No full-sync ETA is guaranteed. On the all-local path, the client occupies its terminal. It prints an exact `cd` command for a second terminal; use that second terminal in the same project folder for local logs and status.
 
 ## 3. Deploy the hosted client
 
@@ -114,7 +114,7 @@ Keep the login and this file private. The browser may retain its HTTP Basic sess
 
 Managed AWS instances get inbound TCP 80/443 automatically. On existing hosts, allow those ports in the provider firewall yourself. Ports 80/443 must be free. Existing directories/services are not replaced unless the saved deployment owns `/opt/relay-client`. Caddy certificates persist in Docker volumes across client restarts. Container logs are bounded; reads, signed submissions, request bodies and upstream connections have explicit limits.
 
-If HTTPS setup has not finished, the installer reports that it is unverified. Keep the saved state, check DNS/firewall and the client logs, then rerun the same command. Never bypass certificate errors or restart Snapchain to fix client hosting. On the server, inspect:
+If HTTPS setup has not finished, the installer reports that it is unverified. Keep the saved state, check DNS/firewall and the client logs, then rerun the same command. Never bypass certificate errors or restart Snapchain to fix client hosting. From the project folder, run `./relay ssh` to open the saved host without editing key/host arguments. On that server, inspect:
 
 ```sh
 sudo docker compose -p relay-client -f /opt/relay-client/compose.yml logs --tail 40
@@ -153,15 +153,15 @@ Every reported shard must have single-digit `blockDelay`, positive advancing `ma
 
 Current node compatibility: shard 0 does not serve this message events API. Signer NotFound may be wrapped as HTTP 400, and requester nonce queries need literal `requesterFids[]=...` brackets. The client handles these actual tested shapes rather than guessing nonces or treating relay acceptance as inclusion. See [current documentation differences](docs/CURRENT-DOCS-REVIEW.md).
 
-## Account storage and server storage
+## Account message allowance
 
-Storage rent pays for an FID’s network allowance. Casts, follows (links) and reactions have separate limits, shared across all clients used by that account. Renting a larger AWS disk does not increase those limits. Storage purchases use the protocol’s contracts on OP Mainnet; this is separate from gasless app-key authorization and is not a gas fee per post.
+Storage rent pays for an FID’s network allowance. Casts, follows (links) and reactions have separate limits, shared across all clients used by that account. Storage purchases use the protocol’s contracts on OP Mainnet; this is separate from gasless app-key authorization and is not a gas fee per post.
 
 Query `GET /v1/storageLimitsByFid?fid=YOUR_FID` on your node to inspect each message type’s `used` and `limit` values and the account’s storage-unit details. Spare cast allowance does not imply spare follow allowance. Check current pricing and any expiry terms before purchasing or renewing; avoid copying old quota tables. See the [Storage API reference](https://snapchain.farcaster.xyz/reference/httpapi/storagelimits).
 
 ## Optional new disposable account
 
-The client authorizes an existing FID. A separate helper can prepare/check a test custody wallet without exposing its secret:
+The browser client can create an account through its funded-wallet signup flow; no CLI account helper is needed for the walkthrough. For automated disposable-account tests only, this separate helper can prepare/check a test custody wallet without exposing its secret:
 
 ```sh
 cd client
