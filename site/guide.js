@@ -138,9 +138,32 @@ function selectHosting(value) {
   for (const element of document.querySelectorAll('[data-hosting-only]')) element.hidden = element.dataset.hostingOnly !== hosting;
   for (const link of document.querySelectorAll('[data-setup-jump]')) link.href = hosting === 'local' ? '#local-setup' : '#prerequisites';
   $('#hosting-status').textContent = hosting === 'local' ? 'Your computer: node and client run locally. No AWS account or cloud server.' : 'AWS: both services run on the rented server.';
+  document.dispatchEvent(new Event('hostingchange'));
 }
 wireTabs('[data-hosting]', tab => selectHosting(tab.dataset.hosting));
 selectHosting(new URLSearchParams(location.search).get('hosting') === 'local' || location.hash.startsWith('#local-') ? 'local' : 'aws');
+
+// Keep the reading position visible without advancing or scrolling the page for the reader.
+const chapterLinks = [...document.querySelectorAll('.guide-nav a')];
+let chapterFrame;
+function updateChapter() {
+  chapterFrame = undefined;
+  const visible = chapterLinks.filter(link => !link.closest('[hidden]'));
+  let current = visible[0];
+  for (const link of visible) {
+    const target = document.getElementById(link.hash.slice(1));
+    if (target?.getClientRects().length && target.getBoundingClientRect().top <= 100) current = link;
+  }
+  for (const link of chapterLinks) {
+    if (link === current) link.setAttribute('aria-current', 'location');
+    else link.removeAttribute('aria-current');
+  }
+}
+function queueChapter() { if (chapterFrame === undefined) chapterFrame = requestAnimationFrame(updateChapter); }
+window.addEventListener('scroll', queueChapter, {passive: true});
+window.addEventListener('resize', queueChapter);
+document.addEventListener('hostingchange', queueChapter);
+updateChapter();
 
 // These are teaching sequences. They make no API calls and publish no messages.
 for (const demo of document.querySelectorAll('.flow-demo')) {
