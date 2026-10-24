@@ -6,8 +6,7 @@ from unittest.mock import patch
 from types import SimpleNamespace
 
 ROOT=Path(__file__).resolve().parents[1]
-spec=importlib.util.spec_from_file_location('local_node', ROOT/'scripts/local-node.py')
-local=importlib.util.module_from_spec(spec);spec.loader.exec_module(local)
+from farcaster_cli import local
 
 class LocalNodeTests(unittest.TestCase):
     def test_hardware_boundaries(self):

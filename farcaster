@@ -1,0 +1,5 @@
+#!/usr/bin/env python3
+"""Farcaster node and client CLI."""
+from farcaster_cli.commands import entrypoint
+if __name__ == '__main__':
+    entrypoint()

@@ -15,11 +15,12 @@ function updateCommands() {
   const subnet = $('#aws-subnet').value.trim();
   const directory = $('#remote-dir').value.trim();
   const options = (region !== 'us-east-1' ? ` --region ${quote(region)}` : '') + (profile ? ` --profile ${quote(profile)}` : '') + (subnet ? ` --subnet-id ${quote(subnet)}` : '');
-  const provision = `./relay provision --ack-costs --ssh-cidr ${isIPv4(ip) ? ip : 'YOUR_IP'}/32${options}`;
+  const provision = `./farcaster provision --ack-costs --ssh-cidr ${isIPv4(ip) ? ip : 'YOUR_IP'}/32${options}`;
   $('#overview-provision-command').textContent = isIPv4(ip) ? provision : 'Fill in your IP in step 2 to generate command 1';
   $('#provision-command').textContent = mode === 'aws'
     ? provision
-    : `./relay provision --existing-host ${host || 'ubuntu@YOUR_SERVER'} --key ${quote(key || '~/.ssh/id_ed25519')}${directory !== '/opt/snapchain' ? ` --remote-dir ${quote(directory)}` : ''}`;
+    : `./farcaster provision --existing-host ${host || 'ubuntu@YOUR_SERVER'} --key ${quote(key || '~/.ssh/id_ed25519')}${directory !== '/opt/snapchain' ? ` --remote-dir ${quote(directory)}` : ''}`;
+  $('#setup-command').textContent = $('#provision-command').textContent.replace(' provision ', ' setup ');
   $('#dry-run-command').textContent = `${provision} --dry-run`;
   $('#first-step-title').textContent = mode === 'aws' ? 'Create the server' : 'Connect your server';
   $('#provision-description').textContent = mode === 'aws'
@@ -79,7 +80,7 @@ function announce(text) {
 }
 for (const button of document.querySelectorAll('[data-copy]')) button.addEventListener('click', async () => {
   const id = button.dataset.copy;
-  const needsIPv4 = id === 'dry-run-command' || (id === 'provision-command' && mode === 'aws');
+  const needsIPv4 = id === 'dry-run-command' || (['provision-command', 'setup-command'].includes(id) && mode === 'aws');
   if (needsIPv4 && !isIPv4(publicIPv4())) {
     if (mode !== 'aws') { mode = 'aws'; updateCommands(); }
     $('#command-status').textContent = 'Enter your public IP address above first.';
@@ -98,7 +99,7 @@ for (const button of document.querySelectorAll('[data-copy]')) button.addEventLi
       return;
     }
   }
-  if (id === 'provision-command' && mode === 'existing') {
+  if (['provision-command','setup-command'].includes(id) && mode === 'existing') {
     const directory = $('#remote-dir').value.trim();
     if (!/^\/[A-Za-z0-9_./-]+$/.test(directory) || directory === '/' || directory.split('/').includes('..')) {
       $('#command-status').textContent = 'Enter the existing node’s absolute directory, without .. or shell characters.';
@@ -107,7 +108,7 @@ for (const button of document.querySelectorAll('[data-copy]')) button.addEventLi
       return;
     }
   }
-  if (id === 'provision-command' && mode === 'existing'
+  if (['provision-command','setup-command'].includes(id) && mode === 'existing'
     && (!/^[A-Za-z0-9_.-]+@[A-Za-z0-9_.-]+$/.test($('#ssh-host').value.trim()) || !$('#ssh-key').value.trim())) {
     $('#command-status').textContent = 'Enter a user@hostname SSH target and a local private-key path.';
     $('#command-status').classList.add('error');

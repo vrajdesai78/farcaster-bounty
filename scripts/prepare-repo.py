@@ -8,8 +8,8 @@ import re
 import zipfile
 
 ROOT=Path(__file__).resolve().parents[1]
-FILES={'relay','README.md','SETUP.md','LICENSE','SECURITY.md','CONTRIBUTING.md','NOTICE.md','.gitignore','vercel.json','.vercelignore'}
-TREES=('client/','config/','site/','tests/','.github/','docs/public/')
+FILES={'relay','farcaster','README.md','SETUP.md','LICENSE','SECURITY.md','CONTRIBUTING.md','NOTICE.md','.gitignore','vercel.json','.vercelignore'}
+TREES=('farcaster_cli/','client/','config/','site/','tests/','.github/','docs/public/')
 DOCS={'docs/CURRENT-DOCS-REVIEW.md','docs/LIVE-CLIENT-VERIFICATION.md'}
 SCRIPTS={'scripts/prepare-repo.py','scripts/serve-site.py','scripts/tunnel.sh','scripts/local-node.py'}
 DENIED={'node_modules','dist','__pycache__','.relay-state','.relay-private','.snapchain-aws','.git','test-results','playwright-report','.vite','.impeccable','.agents','.codex','.aws'}
@@ -43,7 +43,7 @@ def build(output):
     with zipfile.ZipFile(output,'w',zipfile.ZIP_DEFLATED) as archive:
         for (path,name) in files:
             info=zipfile.ZipInfo('relay/'+name,date_time=(2026,10,20,0,0,0))
-            info.external_attr=(0o100755 if name=='relay' else 0o100644)<<16
+            info.external_attr=(0o100755 if name in {'relay','farcaster'} else 0o100644)<<16
             info.compress_type=zipfile.ZIP_DEFLATED
             archive.writestr(info,path.read_bytes())
         archive.writestr('relay/SOURCE-MANIFEST.json',json.dumps(manifest,indent=2)+'\n')

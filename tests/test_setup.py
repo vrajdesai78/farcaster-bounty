@@ -8,10 +8,7 @@ import fcntl
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
-loader = SourceFileLoader('relay_cli', str(ROOT / 'relay'))
-spec = importlib.util.spec_from_loader(loader.name, loader)
-relay = importlib.util.module_from_spec(spec)
-loader.exec_module(relay)
+from farcaster_cli import commands as relay
 
 class SetupTests(unittest.TestCase):
     def setUp(self):
@@ -124,7 +121,7 @@ class SetupTests(unittest.TestCase):
         output=io.StringIO()
         with patch.object(relay,'aws') as aws,contextlib.redirect_stdout(output):
             relay.lifecycle(SimpleNamespace(command='destroy',confirm=None));aws.assert_not_called()
-        self.assertIn('\n./relay destroy --confirm i-test\n',output.getvalue())
+        self.assertIn('\n./farcaster destroy --confirm i-test\n',output.getvalue())
 
     def test_adopted_host_cannot_be_stopped_or_destroyed(self):
         relay.save({'mode':'adopted','host':'ubuntu@example.org'})

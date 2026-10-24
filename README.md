@@ -2,16 +2,30 @@
 
 **Run your own Farcaster node and client.** Set up a Snapchain read node and host the Farcaster client on the same server. Read and post through your own node, without a third-party social API key.
 
-## Start with three commands
+## Continuous setup CLI
+
+Clone the repo and use `./farcaster --help`. The CLI uses Python’s standard library; no pip dependencies or source/config edits are needed. In the [guide](https://farcaster-client-sable.vercel.app/#commands), enter your IP and copy the generated setup command:
+
+```sh
+./farcaster setup --ack-costs --ssh-cidr YOUR_IP/32
+```
+
+This runs provision → node → client → sync verification in one terminal. It streams installer/build output and readable node logs, shows per-shard height/delay, and keeps watching after readiness. `--verbose` includes full sanitized node diagnostics. Ctrl-C leaves hosted services running; rerun the same command to resume. Credentials are hidden during setup; retrieve them with `./farcaster client --credentials` privately. Logs rotate in `.relay-state/setup.log`.
+
+For an existing deployment, `./farcaster watch` only follows logs and shard progress. `./farcaster watch --once --timeout 90` exits after verified sync or a timeout without changing the server. For both services on your computer, use `./farcaster setup --local`; Ctrl-C stops its local client but leaves the local node running. Local hardware requirements still apply.
+
+The implementation is in `farcaster_cli/`. `python3 -m farcaster_cli` is also supported. `./relay` and `scripts/local-node.py` remain compatibility entry points for older instructions.
+
+## Or run three stages separately
 
 Use the [guide’s command builder](https://farcaster-client-sable.vercel.app/#commands) to enter your IP and copy the exact commands. The snippet below is a template; the builder fills it without source/config edits. Sign in to AWS and check the prerequisites in the guide first. Use a separate fresh clone for a new deployment; an existing folder resumes its recorded server.
 
 After downloading/cloning this source and installing the [prerequisites](SETUP.md), run these from the repository root. Replace `YOUR_IP` with your current public IPv4 address.
 
 ```sh
-./relay provision --ack-costs --ssh-cidr YOUR_IP/32
-./relay node
-./relay client
+./farcaster provision --ack-costs --ssh-cidr YOUR_IP/32
+./farcaster node
+./farcaster client
 ```
 
 The AWS command provisions paid compute: one Ubuntu m5.xlarge and 2,000 GiB encrypted gp3 disk. It uses an existing VPC/subnet. Mainnet snapshot restore takes hours; the commands start the process, not instant sync. No shutdown is scheduled. Read the cost and cleanup sections before provisioning.
@@ -19,12 +33,12 @@ The AWS command provisions paid compute: one Ubuntu m5.xlarge and 2,000 GiB encr
 For an existing, already-running node instead:
 
 ```sh
-./relay provision --existing-host ubuntu@YOUR_SERVER --key ~/.ssh/id_ed25519
-./relay node
-./relay client
+./farcaster provision --existing-host ubuntu@YOUR_SERVER --key ~/.ssh/id_ed25519
+./farcaster node
+./farcaster client
 ```
 
-The node step checks the adopted deployment without replacing or restarting it. The client step installs separate services in `/opt/relay-client`; allow TCP 80/443 on existing hosts. Lifecycle commands never stop or destroy an adopted server. The third command installs the HTTPS client beside your node and prints its URL. Use the generated login displayed in your interactive terminal, or retrieve it later with `./relay client --credentials`. No purchased domain or always-running local terminal is required. Each deployment's state and private keys stay in ignored `.relay-state/`. Rerun interrupted commands with that same state to resume.
+The node step checks the adopted deployment without replacing or restarting it. The client step installs separate services in `/opt/relay-client`; allow TCP 80/443 on existing hosts. Lifecycle commands never stop or destroy an adopted server. The third command installs the HTTPS client beside your node and prints its URL. Retrieve the private website login with `./farcaster client --credentials`. No purchased domain or always-running local terminal is required. Each deployment's state and private keys stay in ignored `.relay-state/`. Rerun interrupted commands with that same state to resume.
 
 ## What works
 
@@ -54,9 +68,9 @@ The public deployment contains only the tutorial and its assets. The production 
 
 ### Hosted client and local development
 
-`./relay client` builds and hosts the Farcaster client on the same EC2 as Snapchain. Caddy manages HTTPS using a free IP-based sslip.io hostname, or your optional `--domain`. The generated login protects both the interface and API. Signing material stays in browser memory. See [the hosted-client instructions](SETUP.md#3-deploy-the-hosted-client) for credentials, network ports and certificate checks.
+`./farcaster client` builds and hosts the Farcaster client on the same EC2 as Snapchain. Caddy manages HTTPS using a free IP-based sslip.io hostname, or your optional `--domain`. The generated login protects both the interface and API. Signing material stays in browser memory. See [the hosted-client instructions](SETUP.md#3-deploy-the-hosted-client) for credentials, network ports and certificate checks.
 
-For development, `./relay client --local` retains the original local proxy and SSH tunnel at `http://127.0.0.1:5173/`. This optional mode needs local Node.js and a running terminal. A static upload of `client/dist` to Vercel supplies neither hosted backend nor local connection. Keep the guide project’s Root Directory at `.`.
+For development, `./farcaster client --local` retains the original local proxy and SSH tunnel at `http://127.0.0.1:5173/`. This optional mode needs local Node.js and a running terminal. A static upload of `client/dist` to Vercel supplies neither hosted backend nor local connection. Keep the guide project’s Root Directory at `.`.
 
 After deployment, check the homepage, fonts/screenshots, chapter links and command copying at the returned HTTPS URL. The guide explains how to open the client URL printed by the installer. GitHub Pages remains an optional manual workflow.
 
@@ -74,13 +88,13 @@ Node 22.12+ or a supported newer LTS; Python 3.9+; macOS/Linux or WSL2. AWS CLI 
 
 ## Cleanup and licenses
 
-Closing the browser or setup terminal leaves the hosted client and node running. For optional local mode, Ctrl-C stops the local client, not the node. `./relay disconnect` closes its tunnel. `./relay stop` and `./relay destroy` first print plans; a matching instance ID via `--confirm` is required to act on a managed instance. Stopped EC2 retains disk charges. Destruction permanently deletes its configured root disk. Inspect AWS for retained resources afterward. Adopted servers are never managed by these commands.
+Closing the browser or setup terminal leaves the hosted client and node running. For optional local mode, Ctrl-C stops the local client, not the node. `./farcaster disconnect` closes its tunnel. `./farcaster stop` and `./farcaster destroy` first print plans; a matching instance ID via `--confirm` is required to act on a managed instance. Stopped EC2 retains disk charges. Destruction permanently deletes its configured root disk. Inspect AWS for retained resources afterward. Adopted servers are never managed by these commands.
 
 Project code: [MIT](LICENSE). Bundled upstream Snapchain configuration and fonts retain their own licenses; see [NOTICE.md](NOTICE.md). No public endorsement, prize or completed submission is claimed.
 
 ## Install the client on your phone
 
-Open the HTTPS client address printed by `./relay client`, sign in if the deployment requires a login, then choose **Install app**. On iPhone/iPad, open that address in Safari and choose **Share → Add to Home Screen**. The node stays on EC2; the installed app is its browser client. `./relay client --public` removes the website login; `--private` restores it. Keep raw node APIs restricted by the firewall when using public mode. Conversations and profiles have shareable hash routes. Drafts last for the current page session.
+Open the HTTPS client address printed by `./farcaster client`, sign in if the deployment requires a login, then choose **Install app**. On iPhone/iPad, open that address in Safari and choose **Share → Add to Home Screen**. The node stays on EC2; the installed app is its browser client. `./farcaster client --public` removes the website login; `--private` restores it. Keep raw node APIs restricted by the firewall when using public mode. Conversations and profiles have shareable hash routes. Drafts last for the current page session.
 
 The service worker provides a connection-error screen without caching account data, authenticated pages, API responses or signing keys. Reconnect a signer after closing/reloading the app. Browser-wallet availability depends on the mobile browser or wallet; home-screen installation does not supply an Ethereum wallet. Real-device installation and wallet-extension support must be tested separately from automated browser checks.
 
@@ -91,11 +105,11 @@ Use the guide’s **On your computer · No AWS** tab. The local path needs Linux
 After cloning and entering the project folder:
 
 ```sh
-python3 scripts/local-node.py prepare
-python3 scripts/local-node.py start
-python3 scripts/local-node.py client
+./farcaster local prepare
+./farcaster local start
+./farcaster local client
 ```
 
-Open http://127.0.0.1:5173/ on that computer. The local client talks directly to local port3381. No AWS account, AWS CLI or SSH tunnel is used. `python3 scripts/local-node.py status` checks two samples and a real read; `logs` inspects bounded logs, and `stop` stops the project containers while retaining data. Configuration/data stay in ignored `.relay-private/local-node`. The pinned node and local port overrides have been configuration-tested, not fully restored/synced on fresh local hardware.
+Open http://127.0.0.1:5173/ on that computer. The local client talks directly to local port3381. No AWS account, AWS CLI or SSH tunnel is used. `./farcaster local status` checks two samples and a real read; `logs` inspects bounded logs, and `stop` stops the project containers while retaining data. Configuration/data stay in ignored `.relay-private/local-node`. The pinned node and local port overrides have been configuration-tested, not fully restored/synced on fresh local hardware.
 
-This differs from `./relay client --local`, which remains a local client for a remote node. The AWS tab runs both node and client on AWS and provides the hosted HTTPS/PWA address.
+This differs from `./farcaster client --local`, which remains a local client for a remote node. The AWS tab runs both node and client on AWS and provides the hosted HTTPS/PWA address.

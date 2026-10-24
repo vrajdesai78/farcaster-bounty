@@ -17,7 +17,7 @@
 
 Do not replace missing endorsement or source-access URLs with placeholders. The guide and MIT source repository are public. Vercel publishes the guide from `main`; the optional GitHub Pages workflow is manual.
 
-`./relay client` deploys a separate production service and Caddy on the node host; `--local` preserves development mode. Live HTTPS, reads, signed social actions and revocation passed on the existing server; see [hosted evidence](HOSTED-CLIENT-VERIFICATION.md). The fresh-server run remains separate evidence and is not complete.
+`./farcaster client` deploys a separate production service and Caddy on the node host; `--local` preserves development mode. Live HTTPS, reads, signed social actions and revocation passed on the existing server; see [hosted evidence](HOSTED-CLIENT-VERIFICATION.md). The fresh-server run remains separate evidence and is not complete.
 
 The 23 October retry was cancelled by the operator before node installation. Its replacement test instance and dedicated resources were cleaned up; it contributes no new sync/read/write acceptance evidence.
 
@@ -28,3 +28,9 @@ The default AWS path requires no source/config edits after prerequisites. The gu
 A recording must use separate fresh-clone state if it is intended to show a new deployment. Reusing the current deployment folder resumes its recorded server. AWS account activation/permissions, installed tools, an existing default VPC/subnet (or an appropriate existing public subnet), wallet approval and optional OP funding remain user prerequisites. The guide does not automate those account/provider decisions.
 
 Verification: 26 Python tests, guide copy/validation checks at 320/390/768/1440 widths, and source packaging passed. The new SSH helper was tested with a mocked saved host; no new EC2 instance, paid account transaction, node restart or cleanup action was performed during this review. This review does not complete fresh-server full-sync acceptance.
+
+## Continuous setup CLI — 24 October 2026
+
+`./farcaster setup` now runs provisioning, node installation, HTTPS client deployment and ongoing sync monitoring in one session. `--local` runs both services on suitable local hardware. `./farcaster watch` reconnects to an existing deployment without changing services. The earlier stage commands and legacy launchers remain compatible. Selected installation/build output streams immediately; node logs are summarized by default, with `--verbose` for sanitized diagnostics. Local state and rotating logs stay out of the source archive.
+
+Verification: 46 Python tests passed, including streamed output, credential filtering, resume behavior, timeout and owned-process cleanup. Browser checks covered command generation/copying, validation, responsive widths and natural diagram explanation height. The source archive passed its allowlist/secret scan. A live read-only watch against the existing server worked and correctly refused readiness: shard 1 stayed at height 49477354 while other shards advanced, with roughly four hours of delay. No restart or fresh paid provisioning occurred. Earlier successful sync evidence is historical; current readiness must be checked again after recovery. These checks do not complete fresh-server full-sync acceptance.

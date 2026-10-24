@@ -134,7 +134,7 @@ footer small { display: block; font-size: 12px; line-height: 1.7; }
 .flow-controls button { min-height: 44px; padding: 8px 14px; border: 1px solid #bdb7cb; border-radius: 5px; color: var(--accent); background: white; font-size: 14px; }
 .flow-controls button:hover { background: #f1ecfb; }
 .flow-progress { font: 14px/1.5 Instrument, sans-serif; color: var(--muted); }
-.flow-explanation { min-height: 112px; margin: 20px 0 0; }
+.flow-explanation { margin: 20px 0 0; }
 .flow-explanation p { margin: 0; font-size: 16px; line-height: 1.75; }
 .flow-demo figcaption { display: block; }
 .flow-demo.is-playing .flow-step[aria-current="step"]:not(:last-child)::after { animation: flow-relay 1.1s ease-in-out infinite; }
@@ -147,6 +147,5 @@ footer small { display: block; font-size: 12px; line-height: 1.7; }
   .flow-owner { margin-bottom: 4px; grid-column: 2; }
   .flow-detail { grid-column: 2; }
   .flow-step:not(:last-child)::after { right: auto; left: 50%; top: auto; bottom: -25px; transform: translateX(-50%) rotate(90deg); }
-  .flow-explanation { min-height: 0; }
 }
 @media (prefers-reduced-motion: reduce) { .flow-demo.is-playing .flow-step::after { animation: none; } }

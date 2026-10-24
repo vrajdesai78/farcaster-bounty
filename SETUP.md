@@ -4,7 +4,7 @@ This guide covers the same setup as the interactive tutorial in `site/`. See [ve
 
 ## Before starting
 
-Use Terminal on macOS, a terminal app on Linux, or Ubuntu inside WSL2 on Windows. Install the tools in that environment. Paste one command at a time and press Enter; wait for it to finish before continuing. After cloning, `cd farcaster-bounty` moves into the project folder. Run every `./relay` command from that same folder. Keep its hidden `.relay-state` directory so you can resume and clean up the same server.
+Use Terminal on macOS, a terminal app on Linux, or Ubuntu inside WSL2 on Windows. Install the tools in that environment. Paste one command at a time and press Enter; wait for it to finish before continuing. After cloning, `cd farcaster-bounty` moves into the project folder. Run every `./farcaster` command from that same folder. Keep its hidden `.relay-state` directory so you can resume and clean up the same server.
 
 Start with reads: no Farcaster wallet is required to read a cast. GitHub access gets the code, AWS credentials manage the paid server, and the generated client login opens the hosted client. These are separate from Farcaster account authorization. The [interactive walkthrough](https://farcaster-client-sable.vercel.app/#prerequisites) includes tool checks and recovery steps.
 
@@ -18,7 +18,7 @@ The AWS principal needs: `ec2:Describe*`, `ec2:ImportKeyPair`, `ec2:CreateSecuri
 
 ## Download and check the setup helper
 
-`./relay` is a Python script in this repository, not a preinstalled command. These files are public and MIT licensed; you do not need a GitHub account, invitation or command-line GitHub login to download them. You do not need to create your own repository. In a terminal on your computer, check the required tools and AWS login:
+`./farcaster` is a Python script in this repository, not a preinstalled command. These files are public and MIT licensed; you do not need a GitHub account, invitation or command-line GitHub login to download them. You do not need to create your own repository. In a terminal on your computer, check the required tools and AWS login:
 
 ```sh
 git --version
@@ -33,17 +33,27 @@ The first four commands print versions; the last identifies the AWS account that
 ```sh
 git clone https://github.com/vrajdesai78/farcaster-bounty.git
 cd farcaster-bounty
-./relay --help
+./farcaster --help
 ```
 
-`git clone` downloads the project, `cd` enters its folder, and `./relay --help` lists the helper's commands without creating resources. Expect output starting with `usage: relay`. If cloning fails, check the URL and your network connection. Use an existing clone only to resume its saved deployment. For a separate recording/new setup, use `git clone https://github.com/vrajdesai78/farcaster-bounty.git farcaster-node-demo` and `cd farcaster-node-demo` from your projects folder. That creates separate state and, if you provision, another paid server. Do not delete old deployment state. Run every later command there and keep `.relay-state` for retries and cleanup. The public source is available at https://github.com/vrajdesai78/farcaster-bounty under the MIT license.
+`git clone` downloads the project, `cd` enters its folder, and `./farcaster --help` lists the helper's commands without creating resources. Expect output starting with `usage: relay`. If cloning fails, check the URL and your network connection. Use an existing clone only to resume its saved deployment. For a separate recording/new setup, use `git clone https://github.com/vrajdesai78/farcaster-bounty.git farcaster-node-demo` and `cd farcaster-node-demo` from your projects folder. That creates separate state and, if you provision, another paid server. Do not delete old deployment state. Run every later command there and keep `.relay-state` for retries and cleanup. The public source is available at https://github.com/vrajdesai78/farcaster-bounty under the MIT license.
+
+## Continuous setup (recommended)
+
+Use the guide’s command builder to fill in your IP and copy `./farcaster setup --ack-costs --ssh-cidr YOUR_IP/32`. It runs the three stages below, streams installation/build output, follows node logs and reports per-shard height/delay. No source/config files need editing. Snapshot restore can take hours; keep the terminal open to watch it. The CLI shows READY only after two advancing low-delay samples and a real cast read, then continues monitoring. `--once` exits after verification. Ctrl-C leaves AWS resources and hosted services running; their costs continue.
+
+Resume from the same project folder with the same command. Healthy existing client services are kept running. `./farcaster watch` is a read-only live view for an existing deployment, with `--verbose` for full sanitized diagnostics and `--timeout 90` for a bounded run. Logs rotate at 2 MiB with one backup in `.relay-state/setup.log`; credentials and input payloads are not streamed. Retrieve the website login separately with `./farcaster client --credentials` in a private terminal.
+
+For all-local setup, use `./farcaster setup --local` after the local prerequisites. This runs the node/client and monitoring in one terminal without AWS. Local logs rotate in `.relay-private/local-node/setup.log`. Exiting local setup (including `--once`) stops only its local client child; node containers remain running. `./farcaster watch --local` watches without starting/stopping either service. The individual commands are `./farcaster local prepare|start|client|status|logs|stop`.
+
+The `farcaster_cli/` package holds the CLI; the `farcaster` file is its executable entry point. Legacy `./relay` commands still work. The stages below remain available separately.
 
 ## 1. Provision compute
 
 In the [guide’s command builder](https://farcaster-client-sable.vercel.app/#commands), paste your public IPv4 from https://checkip.amazonaws.com/ and copy the generated command. No source/config changes are required. The snippet below is a template; the builder fills it without manually editing commands. A /32 restricts SSH to that address. Your account needs a default VPC/subnet in the chosen region, or an existing internet-routed subnet entered in the builder.
 
 ```sh
-./relay provision --ack-costs --ssh-cidr YOUR_IP/32
+./farcaster provision --ack-costs --ssh-cidr YOUR_IP/32
 ```
 
 Use `--region REGION`, `--profile PROFILE`, or `--subnet-id SUBNET` as needed. The default is `us-east-1`, AWS's configured principal and a default subnet. If there is no default subnet, supply an existing internet-routed subnet. The helper never creates a VPC/NAT gateway. `--ami` permits an explicit Ubuntu x86_64 AMI; otherwise a Canonical public SSM parameter resolves Ubuntu 22.04 at runtime and the selected AMI ID is saved.
@@ -51,7 +61,7 @@ Use `--region REGION`, `--profile PROFILE`, or `--subnet-id SUBNET` as needed. T
 Before paying, inspect the plan without making AWS calls:
 
 ```sh
-./relay provision --ack-costs --ssh-cidr YOUR_IP/32 --dry-run
+./farcaster provision --ack-costs --ssh-cidr YOUR_IP/32 --dry-run
 ```
 
 Created resources: one instance/root disk, SSH key pair and security group. HTTP/metrics bind to server loopback. Public peer ingress is UDP 3382 and TCP 3383; SSH is your /32. IMDSv2 is required. Detailed monitoring is not enabled. The private SSH key stays on your computer.
@@ -63,7 +73,7 @@ State is written after each stage to `.relay-state/state.json` with mode 600; it
 **Existing node alternative:** adopting the host creates no resources or software. The node step checks it; the client step installs the separate hosted client:
 
 ```sh
-./relay provision --existing-host ubuntu@YOUR_SERVER --key ~/.ssh/id_ed25519
+./farcaster provision --existing-host ubuntu@YOUR_SERVER --key ~/.ssh/id_ed25519
 ```
 
 Default existing deployment directory is `/opt/snapchain`; use `--remote-dir /absolute/path` if needed. The key must already work for the host. Use a dedicated `RELAY_STATE_DIR` for another deployment. Do not point adoption at an empty host and expect installation; it is a non-mutating check of an already-running node.
@@ -71,7 +81,7 @@ Default existing deployment directory is `/opt/snapchain`; use `--remote-dir /ab
 ## 2. Start Snapchain
 
 ```sh
-./relay node
+./farcaster node
 ```
 
 For a new managed host, the helper waits for SSH/cloud-init, installs Ubuntu's Docker packages if absent, uploads the bundled Compose and validators files, and starts only Snapchain and StatsD. These are dedicated-host instructions. There is no Grafana default-admin surface, host-wide Docker pruning, cron upgrade or scheduled shutdown.
@@ -83,7 +93,7 @@ For an adopted host, this command only reads `/v1/info`. It does not overwrite c
 New installs use `/opt/relay-snapchain`. Snapshot download, decompression, tar extraction and block catch-up can take hours. Observe bounded logs:
 
 ```sh
-./relay logs
+./farcaster logs
 ```
 
 Never infer a stall just because tar extraction is quiet. Check actual progress/free disk before restarting. No full-sync ETA is guaranteed. On the all-local path, the client occupies its terminal. It prints an exact `cd` command for a second terminal; use that second terminal in the same project folder for local logs and status.
@@ -91,7 +101,7 @@ Never infer a stall just because tar extraction is quiet. Check actual progress/
 ## 3. Deploy the hosted client
 
 ```sh
-./relay client
+./farcaster client
 ```
 
 This builds the browser client and installs a small production service beside Snapchain in `/opt/relay-client`. Caddy provides HTTPS and renews certificates. The installer starts only these client services; it leaves Snapchain and its database running. The browser signs social messages and sends them through HTTPS. The client service reaches the node at `127.0.0.1:3381` on the same server.
@@ -101,20 +111,20 @@ The command prints an HTTPS URL after checking it with normal certificate verifi
 A purchased domain is optional. By default the helper uses `relay-SERVER-IP.sslip.io`; sslip.io resolves the embedded public IP without DNS-account setup. It is a public DNS dependency, and certificate-authority availability/rate limits apply. The URL contains your public server IP. If that IP changes, the hostname and deployment configuration need updating. For a custom domain, point its A record directly to the server first (DNS proxy disabled), then run:
 
 ```sh
-./relay client --domain client.example.com
+./farcaster client --domain client.example.com
 ```
 
-The client is protected by a generated HTTP Basic login over HTTPS. It is separate from your wallet and never grants Farcaster signing permission. Login credentials are stored locally in mode-600 `.relay-state/hosted-access.json`; the server receives only a hash. The installer displays them automatically in an interactive terminal. When output is captured or redirected, it prints only the private file path. To retrieve them later on your own terminal:
+The client is protected by a generated HTTP Basic login over HTTPS. It is separate from your wallet and never grants Farcaster signing permission. Login credentials are stored locally in mode-600 `.relay-state/hosted-access.json`; the server receives only a hash. The CLI prints only the private credentials file path during setup/build. It does not display the password automatically. To retrieve them later on your own terminal:
 
 ```sh
-./relay client --credentials
+./farcaster client --credentials
 ```
 
 Keep the login and this file private. The browser may retain its HTTP Basic session; close the private browser session after use on a shared device. The app signer still stays in browser memory and is forgotten on reload.
 
 Managed AWS instances get inbound TCP 80/443 automatically. On existing hosts, allow those ports in the provider firewall yourself. Ports 80/443 must be free. Existing directories/services are not replaced unless the saved deployment owns `/opt/relay-client`. Caddy certificates persist in Docker volumes across client restarts. Container logs are bounded; reads, signed submissions, request bodies and upstream connections have explicit limits.
 
-If HTTPS setup has not finished, the installer reports that it is unverified. Keep the saved state, check DNS/firewall and the client logs, then rerun the same command. Never bypass certificate errors or restart Snapchain to fix client hosting. From the project folder, run `./relay ssh` to open the saved host without editing key/host arguments. On that server, inspect:
+If HTTPS setup has not finished, the installer reports that it is unverified. Keep the saved state, check DNS/firewall and the client logs, then rerun the same command. Never bypass certificate errors or restart Snapchain to fix client hosting. From the project folder, run `./farcaster ssh` to open the saved host without editing key/host arguments. On that server, inspect:
 
 ```sh
 sudo docker compose -p relay-client -f /opt/relay-client/compose.yml logs --tail 40
@@ -125,17 +135,17 @@ sudo docker compose -p relay-client -f /opt/relay-client/compose.yml logs --tail
 Install Node.js 22.12+ or a newer supported LTS on your computer, then run:
 
 ```sh
-./relay client --local
+./farcaster client --local
 ```
 
-This keeps the original loopback client/proxy at `http://127.0.0.1:5173/` and an SSH tunnel on port 13381. Keep the terminal running. Choose different ports with `RELAY_TUNNEL_PORT=13382 PORT=5175 ./relay client --local` when needed. The setup helper refuses to replace an unrelated tunnel process. First SSH connections record the host key using accept-new; changed keys are rejected. Verify the initial fingerprint through a trusted channel.
+This keeps the original loopback client/proxy at `http://127.0.0.1:5173/` and an SSH tunnel on port 13381. Keep the terminal running. Choose different ports with `RELAY_TUNNEL_PORT=13382 PORT=5175 ./farcaster client --local` when needed. The setup helper refuses to replace an unrelated tunnel process. First SSH connections record the host key using accept-new; changed keys are rejected. Verify the initial fingerprint through a trusted channel.
 
 `vite preview` alone does not provide a node connection. Vercel hosts the static guide, while the production client and node run on EC2. Do not expose the Vite development server publicly.
 
 ## Verify synchronization
 
 ```sh
-./relay status --verify
+./farcaster status --verify
 ```
 
 Every reported shard must have single-digit `blockDelay`, positive advancing `maxHeight` in two samples 15 seconds apart, and a real query must return a cast. The helper writes `.relay-state/sync-evidence.json`. A running container, a completed download, or a single healthy sample is insufficient. `numShards` counts message shards; `shardInfos` also includes shard 0.
@@ -189,14 +199,14 @@ sudo docker compose -p relay-client -f /opt/relay-client/compose.yml stop
 This leaves the node and all EC2/disk charges in place. In optional local mode, Ctrl-C stops the local client and this closes its tunnel:
 
 ```sh
-./relay disconnect
+./farcaster disconnect
 ```
 
 Managed-server lifecycle commands first print a plan with no change:
 
 ```sh
-./relay stop
-./relay destroy
+./farcaster stop
+./farcaster destroy
 ```
 
 Repeating the chosen command with `--confirm INSTANCE_ID` explicitly authorizes it. The ownership tag must match local state. Stop retains disk charges. Destroy permanently terminates the instance and configured delete-on-termination root disk, waits for termination and deletes its recorded security group/key pair. The default VPC/subnet are never deleted. Inspect AWS for retained resources/snapshots and partial cleanup failures. No automatic shutdown, deletion, paid monitoring or host-wide pruning is installed.
@@ -213,16 +223,16 @@ For a new test server that must not be kept, add `--test-lifetime-hours 24` to t
 
 Before continuing installation, verify cloud-init completed, `sudo systemctl is-active relay-test-expiry.timer`, and `sudo systemctl list-timers relay-test-expiry.timer` on the new server. Independently check EC2's shutdown behavior is `terminate` and its root disk has `DeleteOnTermination=true`. If the timer is not armed, destroy the disposable deployment rather than leaving it unmonitored. This is a server-side safeguard, not a guarantee against OS/cloud failures.
 
-Run normal ownership-checked `./relay destroy --confirm INSTANCE_ID` when testing finishes, even if the server has already terminated, to remove its recorded security group and key pair. Independently verify the instance, root volume, security group and key pair are gone. This option never changes an existing deployment or the default no-expiry setup.
+Run normal ownership-checked `./farcaster destroy --confirm INSTANCE_ID` when testing finishes, even if the server has already terminated, to remove its recorded security group and key pair. Independently verify the instance, root volume, security group and key pair are gone. This option never changes an existing deployment or the default no-expiry setup.
 
 ## Optional public client
 
-`./relay client --public` removes the website password gate. Anyone can read public Farcaster data through the configured gateway and submit messages signed by their own authorized account. The server never signs for visitors or shares the operator’s keys. `./relay client --private` restores the generated website login. The selected mode is saved and retained on later deployments.
+`./farcaster client --public` removes the website password gate. Anyone can read public Farcaster data through the configured gateway and submit messages signed by their own authorized account. The server never signs for visitors or shares the operator’s keys. `./farcaster client --private` restores the generated website login. The selected mode is saved and retained on later deployments.
 
 Before opening a public client, inspect the host and security group: SSH should accept only your operator IP and require a key; raw HTTP/RPC/metrics ports should not be directly internet-accessible, or callers could bypass gateway limits. Keep only the required Snapchain peer connectivity. Public mode does not itself change an adopted host’s firewall. HTTP 80/443 serve the app, and Caddy’s admin API is disabled. The gateway runs on loopback as an unprivileged user with a read-only filesystem, dropped capabilities and CPU/memory limits. It exposes an allowlist, bounded pages/bodies/concurrency, per-IP and global request budgets, and node-side signature validation. These reduce exposure; they are not a guarantee against vulnerabilities or denial of service.
 
 ## All-local computer path (no AWS)
 
-The guide now offers two hosting tabs. For both node and client on this computer, use `python3 scripts/local-node.py prepare`, then `start`, then `client`. See the README’s all-local requirements and the interactive guide for cloning, Docker capacity checks and expected outputs. APIs/metrics bind to loopback using `config/snapchain/local.yml`; UDP3382 remains the peer port. Data is retained in `.relay-private/local-node`. Use `status` for the two-sample/real-read check and `stop` to stop only the local project containers.
+The guide now offers two hosting tabs. For both node and client on this computer, use `./farcaster local prepare`, then `start`, then `client`. See the README’s all-local requirements and the interactive guide for cloning, Docker capacity checks and expected outputs. APIs/metrics bind to loopback using `config/snapchain/local.yml`; UDP3382 remains the peer port. Data is retained in `.relay-private/local-node`. Use `status` for the two-sample/real-read check and `stop` to stop only the local project containers.
 
-No AWS or SSH commands occur on this path. It is configuration/unit-tested; a fresh local full-sync and signed-write run has not been completed. Docker Desktop/WSL disk allocation and underlying physical capacity require operator checks. The existing `./relay client --local` option continues to mean local client plus remote node, not all-local hosting.
+No AWS or SSH commands occur on this path. It is configuration/unit-tested; a fresh local full-sync and signed-write run has not been completed. Docker Desktop/WSL disk allocation and underlying physical capacity require operator checks. The existing `./farcaster client --local` option continues to mean local client plus remote node, not all-local hosting.
