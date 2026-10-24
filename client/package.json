@@ -9,6 +9,7 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview --host 127.0.0.1",
     "test": "node --import tsx --test test/*.test.ts",
+    "test:ui": "playwright test",
     "test-account": "node --import tsx scripts/test-account.mjs",
     "start": "node server/production.mjs"
   },

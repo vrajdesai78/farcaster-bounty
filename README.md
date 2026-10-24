@@ -70,7 +70,7 @@ The public deployment contains only the tutorial and its assets. The production 
 
 ### Hosted client and local development
 
-`./farcaster client` builds and hosts the Farcaster client on the same EC2 as Snapchain. Caddy manages HTTPS using a free IP-based sslip.io hostname, or your optional `--domain`. The generated login protects both the interface and API. Signing material stays in browser memory. See [the hosted-client instructions](SETUP.md#3-deploy-the-hosted-client) for credentials, network ports and certificate checks.
+`./farcaster client` builds and hosts the Farcaster client on the same EC2 as Snapchain. Caddy manages HTTPS using a free IP-based sslip.io hostname, or your optional `--domain`. The generated login protects both the interface and API. Active app keys stay in browser memory. Recovery-phrase import can optionally save an encrypted phrase on the device with a separate password; logout clears the active key and draft, while Remove saved recovery deletes that encrypted backup. See [the hosted-client instructions](SETUP.md#3-deploy-the-hosted-client) for credentials, network ports and certificate checks.
 
 For development, `./farcaster client --local` retains the original local proxy and SSH tunnel at `http://127.0.0.1:5173/`. This optional mode needs local Node.js and a running terminal. A static upload of `client/dist` to Vercel supplies neither hosted backend nor local connection. Keep the guide project’s Root Directory at `.`.
 
@@ -85,6 +85,8 @@ npm ci
 npm test
 npm run build
 ```
+
+For browser recovery/logout regression tests, run `npm run test:ui` from `client/` with a Playwright Chromium browser installed. To use an existing Google Chrome installation, run `PLAYWRIGHT_CHANNEL=chrome npm run test:ui`. The tests intercept all node requests and use a public recovery test vector; they do not register a live signer or spend funds.
 
 Node 22.12+ or a supported newer LTS; Python 3.9+; macOS/Linux or WSL2. AWS CLI v2 is needed only for managed AWS provisioning. See [CONTRIBUTING.md](CONTRIBUTING.md).
 

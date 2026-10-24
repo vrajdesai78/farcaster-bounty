@@ -38,3 +38,5 @@ select{font:inherit;border:1px solid #dadce7;border-radius:8px;padding:10px;back
 .registration-cost dd { margin: 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .onboarding input[type="password"] { letter-spacing: .12em; }
 @media(max-width:650px) { .onboarding { max-height: 92dvh; padding: 20px; }.onboarding h2 { font-size: 24px; }.onboarding .fine-print { font-size: 12px; } }
+
+.recovery-save { margin: 20px 0; padding: 16px; border: 1px solid var(--line); border-radius: 8px; }
