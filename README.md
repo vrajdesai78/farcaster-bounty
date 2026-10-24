@@ -48,9 +48,9 @@ The node step checks the adopted deployment without replacing or restarting it. 
 - Existing-account detection through a browser wallet, optional browser-only English recovery-phrase import, and new-account onboarding with OP Mainnet funding and explicit paid registration. Every account then uses a newly authorized gasless scoped app key.
 - Casts/replies, likes/recasts and removal, follows/unfollows, app-FID include/exclude filters.
 - Confirmation through message-shard events for social messages and signer-state reads for key changes.
-- Session-only signing material, local forgetting, self-revocation, and rejection of inactive keys.
+- Session-only app signing keys, explicit account logout, optional password-encrypted device recovery storage, removal of saved recovery, self-revocation, and rejection of inactive keys.
 
-The original local client and real mainnet actions were verified on 20 October 2026. The hosted HTTPS client repeated the core flows on 21 October; see [hosted verification](docs/public/HOSTED-CLIENT-VERIFICATION.md). See [sanitized evidence](docs/LIVE-CLIENT-VERIFICATION.md) and [remaining verification limits](docs/public/READINESS.md). A separate fresh-session test passed all three commands on a new AWS server on 21 October, without installation fixes. That test server was deleted before full sync and social-action acceptance; the later retry was cancelled and cleaned up before installation. Fresh full-sync acceptance remains unverified.
+The original local client and real mainnet actions were verified on 20 October 2026. The hosted HTTPS client repeated the core flows on 21 October; see [hosted verification](docs/public/HOSTED-CLIENT-VERIFICATION.md). See [sanitized evidence](docs/LIVE-CLIENT-VERIFICATION.md), [local recovery/logout verification](docs/public/LOCAL-RECOVERY.md), and [remaining verification limits](docs/public/READINESS.md). A separate fresh-session test passed all three commands on a new AWS server on 21 October, without installation fixes. That test server was deleted before full sync and social-action acceptance; the later retry was cancelled and cleaned up before installation. Fresh full-sync acceptance remains unverified.
 
 ## Guide and development
 

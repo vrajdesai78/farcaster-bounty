@@ -6,6 +6,7 @@ Latest existing-server verification: **24 October 2026, 10:11 UTC**. Snapchain *
 - [x] Real client casts/replies, reactions and reversals, follow/unfollow, app include/exclude.
 - [x] Gasless signer registration, import/reconnect, forget, self-revoke, inactive-key rejection.
 - [x] Desktop/tablet/mobile layout and local proxy checks.
+- [x] Optional encrypted device recovery, logout, unlock and removal: unit and desktop/mobile browser checks with intercepted node responses. This is not a live mainnet recovery test; see [local recovery verification](LOCAL-RECOVERY.md).
 - [x] Continuous setup CLI and separate stage commands with stable EC2 token, private state, explicit paid-resource acknowledgement and ownership-checked cleanup.
 - [x] Responsive static tutorial, public source download instructions, licenses and Vercel guide configuration.
 - [x] Clean source archive installed the client and read the existing node through the three-command adoption path; two-sample helper verified sync. This is not a fresh AWS provisioning run.
@@ -42,3 +43,10 @@ Verification: 46 Python tests passed, including streamed output, credential filt
 The stalled shard above was caused by protocol incompatibility: 0.14.3 rejected a non-Pro banner in a committed block, then its worker panicked on a state-root mismatch. Upstream [PR #1054](https://github.com/farcasterxyz/snapchain/pull/1054) supplies the updated rules. The official 0.15.0 image (tag commit `83c75b4f5f1c57b8fb6ab72d06eba48c26c4fbba`, published 23 October) was applied by immutable digest, preserving the existing database. Shard 1 passed the formerly failing block and replayed its backlog.
 
 At 10:11:39 UTC, `./farcaster watch --once` passed the original readiness gate: every shard advanced across two samples, every delay stayed below 10 seconds, and a real cast read succeeded. The hosted client's HTTPS health check passed; its services were not restarted. New setup defaults now pin 0.15.0. Forty-six Python tests and the source archive scan passed. No new resources, disk/instance performance changes or paid account actions were used. This recovery validates the existing server; fresh-server full-sync acceptance remains incomplete.
+
+
+## Source and microsite reconciliation — 25 October 2026
+
+The encrypted recovery/logout change (`f8e44a4`) and the public guide reading-flow update (`7343d43`) are both ancestors of GitHub `main`. No unmerged branch changes remain from these two features. The repository is public, defaults to `main`, and contains the same `site/index.html`, `site/guide.js` and `site/styles.css` served by the public Vercel microsite (byte-for-byte comparison). The guide remains a public setup guide, with no presenter cues or recording-specific commands.
+
+The README feature list, security notes and contributor instructions have been reconciled with the current implementation. [Local recovery verification](LOCAL-RECOVERY.md) records the behavior, test scope and remaining limits. Existing live-test records above remain dated evidence; the source audit does not establish a fresh full-sync pass, manual wallet run, new mainnet action or independent endorsement.
