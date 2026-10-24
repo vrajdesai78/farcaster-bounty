@@ -2,6 +2,8 @@
 
 **Run your own Farcaster node and client.** Set up a Snapchain read node and host the Farcaster client on the same server. Read and post through your own node, without a third-party social API key.
 
+The setup pins **Snapchain 0.15.0**. Our existing node passed sync verification and a real cast read on **24 October 2026 at 10:11 UTC (15:41 IST)** after upgrading from 0.14.3. This is a dated check, not a live status display. See the [recovery record](docs/public/NODE-RECOVERY.md) for the cause, measurements and upgrade limits.
+
 ## Continuous setup CLI
 
 Clone the repo and use `./farcaster --help`. The CLI uses Python’s standard library; no pip dependencies or source/config edits are needed. In the [guide](https://farcaster-client-sable.vercel.app/#commands), enter your IP and copy the generated setup command:

@@ -56,3 +56,7 @@ Pending registration hashes and wallet addresses are public metadata persisted l
 Verification: 41 protocol/gateway/onboarding tests and the production build passed. Local installed-Chrome tests used mocked wallet/node/OP responses for existing-wallet detection, phrase import and authorization, no-phrase-upload/storage, insufficient funds, cost refresh, explicit approval, registration receipt then gasless signing, recovery-address changes, and 320/390/768/1440 layouts. A separate live, read-only OP contract check returned a registration price and fee estimate. No paid registration or public social action was sent in this update. A real user-wallet signup on a physical phone remains unverified. Earlier live signed-action evidence above describes the previous onboarding UI.
 
 References: [IdGateway registration and price](https://docs.farcaster.xyz/reference/contracts/reference/id-gateway), [Snapchain gasless keys](https://snapchain.farcaster.xyz/guides/writing-messages).
+
+## Node compatibility — 24 October 2026
+
+The hosted client remains at https://relay.vrajdesai.dev/. Its Snapchain node was upgraded to 0.15.0, then passed two-sample sync and a real cast read. HTTPS health passed; the client services did not need a restart. See the [recovery record](NODE-RECOVERY.md). This infrastructure check does not establish physical-phone installation or rerun account/social actions.

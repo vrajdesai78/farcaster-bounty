@@ -18,7 +18,7 @@ The AWS principal needs: `ec2:Describe*`, `ec2:ImportKeyPair`, `ec2:CreateSecuri
 
 ## Download and check the setup helper
 
-`./farcaster` is a Python script in this repository, not a preinstalled command. These files are public and MIT licensed; you do not need a GitHub account, invitation or command-line GitHub login to download them. You do not need to create your own repository. In a terminal on your computer, check the required tools and AWS login:
+`./farcaster` launches the CLI from this repository; it is available after cloning, without a separate package installation. These files are public and MIT licensed; you do not need a GitHub account, invitation or command-line GitHub login to download them. You do not need to create your own repository. In a terminal on your computer, check the required tools and AWS login:
 
 ```sh
 git --version
@@ -213,9 +213,19 @@ Repeating the chosen command with `--confirm INSTANCE_ID` explicitly authorizes 
 
 Adopted hosts are never stopped/destroyed by the setup helper. The hosted client command installs separate client services on an adopted host; the node check remains read-only. Inspect and manage any OS shutdown schedule configured separately from this helper yourself. Private deployment instructions and histories are not part of the public source package.
 
+## If one shard stops advancing
+
+Run `./farcaster watch --verbose` (or add `--local` for an all-local node). Compare each shard’s height over time; different shards normally have different heights. `./farcaster status --verify` requires every shard to advance with delays below 10 seconds, then reads a real cast. For all-local verification use `./farcaster local status`.
+
+A progressing snapshot restore can be quiet while unpacking. Leave it running. A shard that repeatedly stops at the same block needs diagnosis: inspect the earliest error around that failure, the running version, free disk and memory. `Messaging(SendErr)` or a pending block request can be a consequence of a failed worker rather than the cause. `mempoolSize: 4294967295` means “not reported” on read nodes.
+
+Our 24 October failure was `ProUserFeature`, followed by `merkle trie root hash mismatch`: 0.14.3 rejected a banner accepted by the network’s updated rules. The official 0.15.0 image replayed that block and caught up using the existing database. Restarting did not fix the old binary. Do not bypass root checks or delete the database to hide a validation mismatch. See the [recovery record](docs/public/NODE-RECOVERY.md).
+
+Updating this checkout changes the files for new installations; it does not upgrade saved remote or local deployments. The node command deliberately leaves an already-started restore alone. For an upgrade, first confirm the official image’s source, digest and activated protocol rules, retain the existing configuration and data, and change only the intended node service. Verify sync again afterward. The original EC2’s manual upgrade is not performed automatically by this CLI.
+
 ## Evidence and remaining gates
 
-Read [live client evidence](docs/LIVE-CLIENT-VERIFICATION.md) and [publication readiness](docs/public/READINESS.md). Own-node sync and mainnet client actions were verified 20 October 2026. A separate fresh-session test passed provisioning, node installation and HTTPS client deployment on a new AWS server on 21 October without installation fixes. Full sync and social actions on that server remain in progress. An independent human reproduction is still required. The exact bounty cutoff remains unverified. No endorsement or submission is fabricated.
+Read [live client evidence](docs/LIVE-CLIENT-VERIFICATION.md) and [publication readiness](docs/public/READINESS.md). Own-node mainnet client actions were verified on 20–23 October 2026. On 24 October at 10:11 UTC, the existing server passed two-sample sync and a real cast read after upgrading to Snapchain 0.15.0; see the [recovery record](docs/public/NODE-RECOVERY.md). A separate fresh-session test passed provisioning, node installation and HTTPS client deployment on 21 October without installation fixes. That server was deleted before full sync and social-action checks; the later retry was cancelled and cleaned up before installation. Fresh-server full-sync acceptance remains incomplete. An independent human reproduction is still required. The exact bounty cutoff remains unverified. No endorsement or submission is fabricated.
 
 ## Optional disposable test deadline
 
@@ -233,6 +243,6 @@ Before opening a public client, inspect the host and security group: SSH should 
 
 ## All-local computer path (no AWS)
 
-The guide now offers two hosting tabs. For both node and client on this computer, use `./farcaster local prepare`, then `start`, then `client`. See the README’s all-local requirements and the interactive guide for cloning, Docker capacity checks and expected outputs. APIs/metrics bind to loopback using `config/snapchain/local.yml`; UDP3382 remains the peer port. Data is retained in `.relay-private/local-node`. Use `status` for the two-sample/real-read check and `stop` to stop only the local project containers.
+The guide now offers two hosting tabs. For both node and client on this computer, use `./farcaster setup --local` to install and watch in one terminal. The separate `./farcaster local prepare`, `start` and `client` commands remain available. See the README’s all-local requirements and the interactive guide for cloning, Docker capacity checks and expected outputs. APIs/metrics bind to loopback using `config/snapchain/local.yml`; UDP3382 remains the peer port. Data is retained in `.relay-private/local-node`. Use `status` for the two-sample/real-read check and `stop` to stop only the local project containers.
 
 No AWS or SSH commands occur on this path. It is configuration/unit-tested; a fresh local full-sync and signed-write run has not been completed. Docker Desktop/WSL disk allocation and underlying physical capacity require operator checks. The existing `./farcaster client --local` option continues to mean local client plus remote node, not all-local hosting.

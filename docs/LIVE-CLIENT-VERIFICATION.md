@@ -62,8 +62,12 @@ The browser wallet path used a local custody signing bridge in automated Chrome;
 
 Thirteen automated regression tests pass, including actual API-shaped nonce/NotFound cases. The production build passes; upstream SDK eval and bundle-size warnings remain. Deliberate revoked-key/NotFound requests can generate expected HTTP error console entries; there were no application runtime crashes in the successful live flows. Screenshots and raw sanitized temporary evidence are outside the repository.
 
-Still required for the bounty: a clean-machine three-command deployment, the responsive public microsite/tutorial, reviewed MIT repository publication, independent human reproduction with public endorsement, verified exact deadline, and the final submission reply. No endorsement or submission was posted during client testing.
+At the time of this 20 October test, deployment, publication and independent reproduction were still outstanding. The guide and MIT repository have since been published, and a fresh server passed installation before being deleted without full-sync acceptance. See [current readiness](public/READINESS.md) for remaining checks. No endorsement or submission was posted during this client test.
 
 ## Hosted follow-up
 
 On 21 October 2026 the same account completed real HTTPS client authorization, cast/reply, reactions, follows, app filters and revocation with the client and node on the same EC2. See [hosted-client verification](public/HOSTED-CLIENT-VERIFICATION.md) for the new hashes and limits. The 20 October record above describes the original local-client run.
+
+## Node upgrade follow-up
+
+The existing node was upgraded to Snapchain 0.15.0 on 24 October and passed two-sample sync plus a real cast read at 10:11 UTC. See the [recovery record](public/NODE-RECOVERY.md). This does not rerun or change the dated social-action evidence above.

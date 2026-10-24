@@ -1,10 +1,12 @@
 # Publication and bounty readiness
 
+Latest existing-server verification: **24 October 2026, 10:11 UTC**. Snapchain **0.15.0**, all shards advancing with delays below 10 seconds, real cast read and hosted HTTPS health passed. See the [node recovery record](NODE-RECOVERY.md). Historical checks and unresolved acceptance limits follow.
+
 - [x] Own-node sync: advancing heights and single-digit delays in two samples, real read.
 - [x] Real client casts/replies, reactions and reversals, follow/unfollow, app include/exclude.
 - [x] Gasless signer registration, import/reconnect, forget, self-revoke, inactive-key rejection.
 - [x] Desktop/tablet/mobile layout and local proxy checks.
-- [x] New three-command helper with stable EC2 token, private state, explicit paid-resource acknowledgement and ownership-checked cleanup.
+- [x] Continuous setup CLI and separate stage commands with stable EC2 token, private state, explicit paid-resource acknowledgement and ownership-checked cleanup.
 - [x] Responsive static tutorial, public source download instructions, licenses and Vercel guide configuration.
 - [x] Clean source archive installed the client and read the existing node through the three-command adoption path; two-sample helper verified sync. This is not a fresh AWS provisioning run.
 - [x] Fresh session and clone: all three commands passed on a new AWS server on 21 October without installation fixes (pinned commit `7f55e8a`). Existing local tools and AWS/GitHub authentication were reused.
@@ -33,7 +35,7 @@ Verification: 26 Python tests, guide copy/validation checks at 320/390/768/1440 
 
 `./farcaster setup` now runs provisioning, node installation, HTTPS client deployment and ongoing sync monitoring in one session. `--local` runs both services on suitable local hardware. `./farcaster watch` reconnects to an existing deployment without changing services. The earlier stage commands and legacy launchers remain compatible. Selected installation/build output streams immediately; node logs are summarized by default, with `--verbose` for sanitized diagnostics. Local state and rotating logs stay out of the source archive.
 
-Verification: 46 Python tests passed, including streamed output, credential filtering, resume behavior, timeout and owned-process cleanup. Browser checks covered command generation/copying, validation, responsive widths and natural diagram explanation height. The source archive passed its allowlist/secret scan. A live read-only watch against the existing server worked and correctly refused readiness: shard 1 stayed at height 49477354 while other shards advanced, with roughly four hours of delay. No restart or fresh paid provisioning occurred. Earlier successful sync evidence is historical; current readiness must be checked again after recovery. These checks do not complete fresh-server full-sync acceptance.
+Verification: 46 Python tests passed, including streamed output, credential filtering, resume behavior, timeout and owned-process cleanup. Browser checks covered command generation/copying, validation, responsive widths and natural diagram explanation height. The source archive passed its allowlist/secret scan. A live read-only watch against the existing server worked and correctly refused readiness: shard 1 stayed at height 49477354 while other shards advanced, with roughly four hours of delay. No restart or fresh paid provisioning occurred. This describes the pre-recovery test; the subsequent successful recovery is recorded below. These checks do not complete fresh-server full-sync acceptance.
 
 ## Node recovery — 24 October 2026, 10:11 UTC
 
