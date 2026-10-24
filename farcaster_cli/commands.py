@@ -26,7 +26,7 @@ STATE_DIR = Path(os.environ.get('RELAY_STATE_DIR', ROOT / '.relay-state')).expan
 STATE_FILE = STATE_DIR / 'state.json'
 TUNNEL_PORT = int(os.environ.get('RELAY_TUNNEL_PORT', '13381'))
 CONSOLE = None
-IMAGE = 'farcasterxyz/snapchain@sha256:15c19fb83091ecf86a9e7ec69d00aa70efd57fbf492e759fa368b954a803ee82'
+IMAGE = 'farcasterxyz/snapchain@sha256:328012d7814db9f5c2f4357a01fc1c3e92f4bed90db30855c9fc356316bb669f'
 
 
 def run(args, capture=True, live=False, **kwargs):

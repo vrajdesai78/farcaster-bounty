@@ -86,7 +86,7 @@ Default existing deployment directory is `/opt/snapchain`; use `--remote-dir /ab
 
 For a new managed host, the helper waits for SSH/cloud-init, installs Ubuntu's Docker packages if absent, uploads the bundled Compose and validators files, and starts only Snapchain and StatsD. These are dedicated-host instructions. There is no Grafana default-admin surface, host-wide Docker pruning, cron upgrade or scheduled shutdown.
 
-Snapchain 0.14.3 is pinned to the registry manifest digest in `config/snapchain/compose.yml`. The config/validator source revision is recorded in `config/snapchain/SOURCE.md`. Future protocol upgrades require reviewing and updating the pins; this version is not promised to remain supported forever. The helper does not silently update a progressing restore.
+Snapchain 0.15.0 is pinned to the registry manifest digest in `config/snapchain/compose.yml`. The config/validator source revision is recorded in `config/snapchain/SOURCE.md`. Future protocol upgrades require reviewing and updating the pins; this version is not promised to remain supported forever. The helper does not silently update a progressing restore. Updating your clone also does not replace an already-running node: review and apply node upgrades separately. Check official image tags and publication runs as well as GitHub releases; its latest-release endpoint can lag a published image.
 
 For an adopted host, this command only reads `/v1/info`. It does not overwrite configuration, install packages or restart the node. If an existing node is restoring and its API resets, inspect its original logs and let progressing restoration continue.
 
